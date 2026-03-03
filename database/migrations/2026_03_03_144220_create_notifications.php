@@ -18,6 +18,8 @@ return new class extends Migration
             $table->string('title')->nullable(value: false);
             $table->string('message')->nullable(value: false);
             $table->string('data')->nullable(value: false);   
+            $table->boolean('is_read')->nullable(value: false);   
+            
             $table->timestamps();
         });
     }
