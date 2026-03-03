@@ -17,8 +17,8 @@ class RegisterRequest extends FormRequest
             'name' => 'required|string|max:255',
             'email' => 'required|string|email|max:255|unique:users',
             'password' => 'required|string|min:8|confirmed',
-            'phone' => 'nullable|string|max:20',
-            'role_id' => 'required|exists:roles,id'
+            'phone' => 'nullable|string|max:20|unique:users',
+            'id_rol' => 'required|exists:roles,id'
         ];
     }
 
@@ -28,11 +28,12 @@ class RegisterRequest extends FormRequest
             'name.required' => 'El nombre es obligatorio',
             'email.required' => 'El email es obligatorio',
             'email.unique' => 'El email ya está registrado',
+            'phone.unique' => 'El teléfono ya está registrado',
             'password.required' => 'La contraseña es obligatoria',
             'password.min' => 'La contraseña debe tener al menos 8 caracteres',
             'password.confirmed' => 'Las contraseñas no coinciden',
-            'role_id.required' => 'El rol es obligatorio',
-            'role_id.exists' => 'El rol seleccionado no existe'
+            'id_rol.required' => 'El rol es obligatorio',
+            'id_rol.exists' => 'El rol seleccionado no existe'
         ];
     }
 }
