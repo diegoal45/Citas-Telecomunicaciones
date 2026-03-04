@@ -27,8 +27,10 @@ class RegisterRequest extends FormRequest
         return [
             'name.required' => 'El nombre es obligatorio',
             'email.required' => 'El email es obligatorio',
+            'email.email' => 'El email no es valido',
             'email.unique' => 'El email ya está registrado',
             'phone.unique' => 'El teléfono ya está registrado',
+            'phone.max' => 'El teléfono excede la longitud máxima permitida',
             'password.required' => 'La contraseña es obligatoria',
             'password.min' => 'La contraseña debe tener al menos 8 caracteres',
             'password.confirmed' => 'Las contraseñas no coinciden',
