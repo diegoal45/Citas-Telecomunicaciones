@@ -11,7 +11,7 @@ class Appointment extends Model
 
     protected $fillable = [
         'client_id', 'team_id', 'appointment_type', 'status',
-        'scheduled_date', 'address', 'phone', 'description',
+        'scheduled_date', 'address', 'description',
         'cancelled_at', 'cancelled_by', 'cancellation_reason'
     ];
 

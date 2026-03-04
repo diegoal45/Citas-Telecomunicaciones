@@ -16,8 +16,18 @@ class QuotationController extends Controller
     {
         $appointment = Appointment::find($request->appointment_id);
         
+        if (!$appointment) {
+            return response()->json(['error' => 'La cita no existe'], 404);
+        }
+
+        // Verificar que el equipo tenga equipo asignado
+        if (!$appointment->team_id) {
+            return response()->json(['error' => 'La cita no tiene equipo asignado'], 400);
+        }
+
+        // Verificar que sea el líder del equipo
         if ($appointment->team->leader_id !== Auth::id()) {
-            return response()->json(['error' => 'No autorizado'], 403);
+            return response()->json(['error' => 'No eres el líder del equipo asignado a esta cita'], 403);
         }
 
         $quotation = Quotation::updateOrCreate(
@@ -27,7 +37,7 @@ class QuotationController extends Controller
 
         $appointment->update(['status' => 'cotizada']);
 
-        return response()->json($quotation, 201);
+        return response()->json($quotation->load('appointment'), 201);
     }
 
     public function setPrice(SetPriceRequest $request, $id)

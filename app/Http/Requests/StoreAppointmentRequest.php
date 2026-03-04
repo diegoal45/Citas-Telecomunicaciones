@@ -16,7 +16,6 @@ class StoreAppointmentRequest extends FormRequest
         return [
             'scheduled_date' => 'required|date|after:now',
             'address' => 'required|string',
-            'phone' => 'required|string|max:20',
             'description' => 'nullable|string'
         ];
     }
@@ -26,8 +25,7 @@ class StoreAppointmentRequest extends FormRequest
         return [
             'scheduled_date.required' => 'La fecha y hora son obligatorias',
             'scheduled_date.after' => 'La fecha debe ser posterior a ahora',
-            'address.required' => 'La dirección es obligatoria',
-            'phone.required' => 'El teléfono es obligatorio'
+            'address.required' => 'La dirección es obligatoria'
         ];
     }
 }

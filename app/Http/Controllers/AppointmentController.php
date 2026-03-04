@@ -15,17 +15,61 @@ class AppointmentController extends Controller
 {
     public function store(StoreAppointmentRequest $request)
     {
+        // Buscar un técnico líder disponible
+        $scheduledDate = $request->scheduled_date;
+        
+        // Obtener todos los técnicos líderes con sus equipos
+        $techLeaders = User::whereHas('role', function($query) {
+            $query->where('name', 'tecnico_lider');
+        })->with('ledTeams')->get();
+
+        if ($techLeaders->isEmpty()) {
+            return response()->json([
+                'error' => 'No hay técnicos líderes disponibles en el sistema'
+            ], 400);
+        }
+
+        // Buscar el primer técnico líder disponible (sin citas en la misma fecha)
+        $availableTeam = null;
+        
+        foreach ($techLeaders as $techLeader) {
+            // Obtener los equipos que lidera
+            $ledTeamIds = $techLeader->ledTeams()->pluck('id');
+            
+            if ($ledTeamIds->isEmpty()) {
+                continue; // Este líder no lidera ningún equipo
+            }
+
+            // Verificar si alguno de sus equipos está disponible en esa fecha
+            $appointmentInDate = Appointment::whereIn('team_id', $ledTeamIds)
+                ->whereDate('scheduled_date', Carbon::parse($scheduledDate)->toDateString())
+                ->exists();
+
+            if (!$appointmentInDate) {
+                // Este equipo está disponible
+                $availableTeam = $ledTeamIds->first();
+                break;
+            }
+        }
+
+        if (!$availableTeam) {
+            return response()->json([
+                'error' => 'No hay tecnicos líderes disponibles en la fecha y hora solicitada'
+            ], 400);
+        }
+
+        // Crear la cita con el equipo asignado
         $appointment = Appointment::create([
             'client_id' => Auth::id(),
+            'team_id' => $availableTeam,
             'appointment_type' => 'cotizacion',
             'status' => 'solicitada',
-            'scheduled_date' => $request->scheduled_date,
+            'scheduled_date' => $scheduledDate,
             'address' => $request->address,
-            'phone' => $request->phone,
             'description' => $request->description
         ]);
 
-        return response()->json($appointment, 201);
+        return response()->json($appointment->load('team'), 201);
     }
 
     public function index()
@@ -41,12 +85,26 @@ class AppointmentController extends Controller
                 ->with('team', 'quotation')
                 ->orderBy('scheduled_date')
                 ->get();
-        } elseif (in_array($user->role->name, ['tecnico_lider', 'tecnico'])) {
-            $teamIds = $user->teams()->pluck('team_id');
-            $appointments = Appointment::whereIn('team_id', $teamIds)
-                ->with('client', 'quotation')
+        } elseif ($user->role->name === 'tecnico_lider') {
+            // Ver citas de equipos que lidera
+            $ledTeamIds = $user->ledTeams()->pluck('id');
+            // Ver también citas de equipos donde es miembro
+            $memberTeamIds = $user->teams()->pluck('team_id');
+            $allTeamIds = $ledTeamIds->merge($memberTeamIds)->unique();
+
+            $appointments = Appointment::whereIn('team_id', $allTeamIds)
+                ->with('client', 'team', 'quotation')
                 ->orderBy('scheduled_date')
                 ->get();
+        } elseif ($user->role->name === 'tecnico') {
+            // Técnico ve solo equipos donde es miembro
+            $teamIds = $user->teams()->pluck('team_id');
+            $appointments = Appointment::whereIn('team_id', $teamIds)
+                ->with('client', 'team', 'quotation')
+                ->orderBy('scheduled_date')
+                ->get();
+        } else {
+            $appointments = collect();
         }
 
         return response()->json($appointments);
