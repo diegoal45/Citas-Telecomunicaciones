@@ -33,6 +33,13 @@ class QuotationController extends Controller
     public function setPrice(SetPriceRequest $request, $id)
     {
         $quotation = Quotation::findOrFail($id);
+        $user = Auth::user();
+
+        // Solo el líder del equipo o admin puede establecer precio
+        if ($user->role->name !== 'admin' && $quotation->appointment->team->leader_id !== $user->id) {
+            return response()->json(['error' => 'No autorizado'], 403);
+        }
+
         $quotation->update(['price' => $request->price]);
 
         return response()->json($quotation);
@@ -75,6 +82,12 @@ class QuotationController extends Controller
     {
         $quotation = Quotation::findOrFail($id);
         $appointment = $quotation->appointment;
+        $user = Auth::user();
+
+        // Solo admin o el cliente puede programar ejecución
+        if ($user->role->name !== 'admin' && $appointment->client_id !== $user->id) {
+            return response()->json(['error' => 'No autorizado'], 403);
+        }
 
         $executionAppointment = Appointment::create([
             'client_id' => $appointment->client_id,

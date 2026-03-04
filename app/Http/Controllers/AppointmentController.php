@@ -57,8 +57,26 @@ class AppointmentController extends Controller
         $appointment = Appointment::with('client', 'team', 'quotation')->findOrFail($id);
         
         $user = Auth::user();
-        if ($user->role->name === 'cliente' && $appointment->client_id !== $user->id) {
-            return response()->json(['error' => 'No autorizado'], 403);
+        
+        // Admin ve todo
+        if ($user->role->name === 'admin') {
+            return response()->json($appointment);
+        }
+        
+        // Cliente ve solo sus citas
+        if ($user->role->name === 'cliente') {
+            if ($appointment->client_id !== $user->id) {
+                return response()->json(['error' => 'No autorizado'], 403);
+            }
+            return response()->json($appointment);
+        }
+
+        // Técnico/Técnico Líder ve solo citas asignadas a su equipo
+        if (in_array($user->role->name, ['tecnico_lider', 'tecnico'])) {
+            $teamIds = $user->teams()->pluck('team_id');
+            if (!$appointment->team_id || !in_array($appointment->team_id, $teamIds->toArray())) {
+                return response()->json(['error' => 'No autorizado'], 403);
+            }
         }
 
         return response()->json($appointment);
@@ -102,6 +120,17 @@ class AppointmentController extends Controller
     public function assignTeam(AssignTeamRequest $request, $id)
     {
         $appointment = Appointment::findOrFail($id);
+        $user = Auth::user();
+
+        // Solo admin o líder del equipo puede asignar
+        if ($user->role->name !== 'admin') {
+            // Verificar si el usuario es líder del equipo que intenta asignar
+            $team = \App\Models\Team::findOrFail($request->team_id);
+            if ($team->leader_id !== $user->id) {
+                return response()->json(['error' => 'No autorizado'], 403);
+            }
+        }
+
         $appointment->update([
             'team_id' => $request->team_id,
             'status' => 'pendiente_cotizacion'
