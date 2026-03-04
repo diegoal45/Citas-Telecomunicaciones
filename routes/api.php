@@ -8,6 +8,7 @@ use App\Http\Controllers\AppointmentController;
 use App\Http\Controllers\QuotationController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\NotificationController;
+use App\Http\Controllers\UserController;
 
 // ===========================================
 // RUTAS PÚBLICAS
@@ -31,6 +32,14 @@ Route::middleware('auth:sanctum')->group(function () {
     // ROLES
     // =======================================
     Route::get('/roles', [RoleController::class, 'index']);
+
+    // =======================================
+    // USUARIOS (CRUD básico)
+    // =======================================
+    // los endpoints de usuarios permiten listar, obtener por id y
+    // manipular registros. puedes protegerlos con middleware o
+    // comprobar el rol en el controlador si solo un admin debe usarlos
+    Route::apiResource('users', UserController::class);
     
     // =======================================
     // EQUIPOS (solo admin)

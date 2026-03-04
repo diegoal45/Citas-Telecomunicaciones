@@ -26,22 +26,19 @@ class TeamController extends Controller
         return response()->json($team->load('leader', 'members'), 201);
     }
 
-    public function show($id)
+    public function show(Team $team)
     {
-        $team = Team::with('leader', 'members', 'appointments')->findOrFail($id);
-        return response()->json($team);
+        return response()->json($team->load('leader', 'members', 'appointments'));
     }
 
-    public function update(UpdateTeamRequest $request, $id)
+    public function update(UpdateTeamRequest $request, Team $team)
     {
-        $team = Team::findOrFail($id);
         $team->update($request->validated());
         return response()->json($team->load('leader', 'members'));
     }
 
-    public function destroy($id)
+    public function destroy(Team $team)
     {
-        $team = Team::findOrFail($id);
         $team->members()->detach();
         $team->delete();
         return response()->json(['message' => 'Equipo eliminado']);
