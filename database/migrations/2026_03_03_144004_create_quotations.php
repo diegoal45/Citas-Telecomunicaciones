@@ -17,7 +17,7 @@ return new class extends Migration
             $table->string('materials')->nullable(value: false);
             $table->string('labor_hours')->nullable(value: false);
             $table->string('required_staff')->nullable(value: false);
-            $table->string('price')->unique()->nullable(value: false);   
+            $table->string('price')->unique()->nullable(value: true);   
             $table->string('approved_at')->nullable(value: false);  
             $table->string('rejected_at')->nullable(value: false); 
             $table->timestamps();
