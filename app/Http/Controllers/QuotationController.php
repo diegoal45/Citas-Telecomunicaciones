@@ -64,10 +64,12 @@ class QuotationController extends Controller
             return response()->json(['error' => 'No autorizado'], 403);
         }
 
+        // marca la cotización como aprobada, el cambio de tipo de cita
+        // se realiza cuando se programa realmente la ejecución.
         $quotation->update(['approved_at' => Carbon::now()]);
         $appointment->update([
             'status' => 'aprobada',
-            'appointment_type' => 'ejecucion'
+            // mantiene appointment_type original (cotizacion)
         ]);
 
         return response()->json(['message' => 'Cotización aprobada']);
@@ -99,17 +101,20 @@ class QuotationController extends Controller
             return response()->json(['error' => 'No autorizado'], 403);
         }
 
-        $executionAppointment = Appointment::create([
-            'client_id' => $appointment->client_id,
-            'team_id' => $request->team_id,
+        // sólo se puede programar si la cotización ya fue aprobada
+        if (is_null($quotation->approved_at)) {
+            return response()->json(['error' => 'La cotización debe estar aprobada antes de programar la ejecución'], 400);
+        }
+
+        // actualiza la cita original en lugar de crear una nueva, de modo que
+        // el historial no se fragmenta y no aparecen citas de ejecución "extra"
+        $appointment->update([
             'appointment_type' => 'ejecucion',
             'status' => 'programada',
             'scheduled_date' => $request->scheduled_date,
-            'address' => $appointment->address,
-            'phone' => $appointment->phone,
-            'description' => $appointment->description
+            'team_id' => $request->team_id,
         ]);
 
-        return response()->json($executionAppointment, 201);
+        return response()->json($appointment, 200);
     }
 }

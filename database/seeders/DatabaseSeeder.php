@@ -15,6 +15,9 @@ class DatabaseSeeder extends Seeder
      */
     public function run(): void
     {
+        // seed roles first so foreign keys can reference them
+        $this->call(\Database\Seeders\RoleSeeder::class);
+
         // User::factory(10)->create();
 
         User::factory()->create([

@@ -10,14 +10,12 @@ use Illuminate\Support\Facades\Auth;
 
 class DashboardController extends Controller
 {
-    public function __construct()
-    {
-        $this->middleware('auth');
-        $this->middleware('role:admin');
-    }
-
     public function index()
     {
+        // Verificar que sea admin
+        if (Auth::user()->role->name !== 'admin') {
+            return response()->json(['error' => 'No autorizado'], 403);
+        }
         $totalCitas = Appointment::count();
         $citasPendientes = Appointment::whereIn('status', ['solicitada', 'pendiente_cotizacion'])->count();
         $citasHoy = Appointment::whereDate('scheduled_date', Carbon::today())->count();
@@ -27,7 +25,7 @@ class DashboardController extends Controller
             ->groupBy('status')
             ->get();
 
-        $empleados = User::whereIn('role_id', [2,3])
+        $empleados = User::whereIn('id_rol', [2,3])
             ->withCount(['clientAppointments as citas_completadas' => function($q) {
                 $q->where('status', 'ejecutada');
             }])
@@ -60,6 +58,11 @@ class DashboardController extends Controller
 
     public function byEmployee($id)
     {
+        // Verificar que sea admin
+        if (Auth::user()->role->name !== 'admin') {
+            return response()->json(['error' => 'No autorizado'], 403);
+        }
+
         $empleado = User::with(['clientAppointments' => function($q) {
             $q->where('status', 'ejecutada');
         }])->findOrFail($id);
@@ -69,6 +72,11 @@ class DashboardController extends Controller
 
     public function byTeam($id)
     {
+        // Verificar que sea admin
+        if (Auth::user()->role->name !== 'admin') {
+            return response()->json(['error' => 'No autorizado'], 403);
+        }
+
         $equipo = Team::with(['appointments' => function($q) {
             $q->where('status', 'ejecutada');
         }, 'members'])->findOrFail($id);

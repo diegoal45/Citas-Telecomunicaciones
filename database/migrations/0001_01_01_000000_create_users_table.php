@@ -15,6 +15,7 @@ return new class extends Migration
             $table->integer(column: 'id')->autoIncrement()->nullable(value: false);
             $table->string('name')->nullable(value: false);
             $table->string('email')->unique()->nullable(value: false);
+            $table->timestamp('email_verified_at')->nullable();
             $table->string('password')->nullable(value: false);
             $table->string('phone')->unique()->nullable(value: false);
             $table->integer('id_rol')->nullable(value: false)->onDelete('cascade');

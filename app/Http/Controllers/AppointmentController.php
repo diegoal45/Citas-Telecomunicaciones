@@ -17,7 +17,28 @@ class AppointmentController extends Controller
     {
         // Buscar un técnico líder disponible
         $scheduledDate = $request->scheduled_date;
-        
+
+        // Preferencia: si el cliente ya ha tenido una cita previa con un equipo
+        // (por ejemplo una cotización aprobada o ejecución programada), tratamos
+        // de reutilizar ese mismo equipo siempre que no tenga conflicto de fecha.
+        $preferredTeam = null;
+        $lastAppointment = Appointment::where('client_id', Auth::id())
+            ->whereNotIn('status', ['cancelada'])
+            // prefer the most recently created record when dates tie
+            ->orderBy('scheduled_date', 'desc')
+            ->orderBy('created_at', 'desc')
+            ->first();
+        if ($lastAppointment && $lastAppointment->team_id) {
+            $preferredTeam = $lastAppointment->team_id;
+            // comprobar si el equipo preferido está libre en la fecha solicitada
+            $conflict = Appointment::where('team_id', $preferredTeam)
+                ->whereDate('scheduled_date', Carbon::parse($scheduledDate)->toDateString())
+                ->exists();
+            if ($conflict) {
+                $preferredTeam = null; // si hay conflicto, no lo usamos
+            }
+        }
+
         // Obtener todos los técnicos líderes con sus equipos
         $techLeaders = User::whereHas('role', function($query) {
             $query->where('name', 'tecnico_lider');
@@ -29,26 +50,28 @@ class AppointmentController extends Controller
             ], 400);
         }
 
-        // Buscar el primer técnico líder disponible (sin citas en la misma fecha)
-        $availableTeam = null;
-        
-        foreach ($techLeaders as $techLeader) {
-            // Obtener los equipos que lidera
-            $ledTeamIds = $techLeader->ledTeams()->pluck('id');
-            
-            if ($ledTeamIds->isEmpty()) {
-                continue; // Este líder no lidera ningún equipo
-            }
+        // Determinar el equipo a asignar: preferencia primero, de lo contrario el
+        // primer equipo libre que encuentre la búsqueda estándar.
+        $availableTeam = $preferredTeam;
+        if (is_null($availableTeam)) {
+            foreach ($techLeaders as $techLeader) {
+                // Obtener los equipos que lidera
+                $ledTeamIds = $techLeader->ledTeams()->pluck('id');
+                
+                if ($ledTeamIds->isEmpty()) {
+                    continue; // Este líder no lidera ningún equipo
+                }
 
-            // Verificar si alguno de sus equipos está disponible en esa fecha
-            $appointmentInDate = Appointment::whereIn('team_id', $ledTeamIds)
-                ->whereDate('scheduled_date', Carbon::parse($scheduledDate)->toDateString())
-                ->exists();
+                // Verificar si alguno de sus equipos está disponible en esa fecha
+                $appointmentInDate = Appointment::whereIn('team_id', $ledTeamIds)
+                    ->whereDate('scheduled_date', Carbon::parse($scheduledDate)->toDateString())
+                    ->exists();
 
-            if (!$appointmentInDate) {
-                // Este equipo está disponible
-                $availableTeam = $ledTeamIds->first();
-                break;
+                if (!$appointmentInDate) {
+                    // Este equipo está disponible
+                    $availableTeam = $ledTeamIds->first();
+                    break;
+                }
             }
         }
 

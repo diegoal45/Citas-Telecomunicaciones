@@ -12,14 +12,16 @@ return new class extends Migration
     public function up(): void
     {
         Schema::create('quotations', function (Blueprint $table) {
-            $table->integer(column: 'id')->autoIncrement()->nullable(value: false);
-            $table->integer('appointment_id')->unique()->nullable(value: false)->onDelete('cascade');
-            $table->string('materials')->nullable(value: false);
-            $table->string('labor_hours')->nullable(value: false);
-            $table->string('required_staff')->nullable(value: false);
-            $table->string('price')->unique()->nullable(value: true);   
-            $table->string('approved_at')->nullable(value: false);  
-            $table->string('rejected_at')->nullable(value: false); 
+            $table->increments('id');
+            $table->unsignedInteger('appointment_id')->unique();
+            $table->text('materials')->nullable();
+            $table->decimal('labor_hours', 8, 2);
+            $table->integer('required_staff');
+            $table->decimal('price', 10, 2)->nullable();
+            $table->timestamp('approved_at')->nullable();
+            $table->timestamp('rejected_at')->nullable();
+            $table->foreign('appointment_id')->references('id')->on('appointments')->onDelete('cascade');
+
             $table->timestamps();
         });
     }

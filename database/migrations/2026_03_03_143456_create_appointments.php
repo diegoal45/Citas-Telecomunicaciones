@@ -12,19 +12,22 @@ return new class extends Migration
     public function up(): void
     {
         Schema::create('appointments', function (Blueprint $table) {
-            $table->integer(column: 'id')->autoIncrement()->nullable(value: false);
-            $table->integer('client_id')->unique()->nullable(value: false)->onDelete('cascade');
-            $table->integer('team_id')->nullable(value: false)->onDelete('cascade');
-            $table->string('appointment_type')->nullable(value: false);
-            $table->string('status')->nullable(value: false);
-            $table->string('scheduled_date')->unique()->nullable(value: false);   
-            $table->string('address')->nullable(value: false);  
-            $table->string('description')->nullable(value: false); 
-            $table->string('cancelled_at')->nullable(value: true);
-            $table->string('cancelled_by')->nullable(value: true);
-            $table->string('cancellation_reason')->nullable(value: false);
-    
-            
+            $table->increments('id');
+            $table->integer('client_id');
+            $table->integer('team_id')->nullable();
+            $table->string('appointment_type');
+            $table->string('status');
+            $table->timestamp('scheduled_date');
+            $table->string('address');
+            $table->string('description');
+            $table->timestamp('cancelled_at')->nullable();
+            $table->integer('cancelled_by')->nullable();            $table->text('cancellation_reason')->nullable();
+
+            // foreign keys must be added after the columns are defined
+            $table->foreign('client_id')->references('id')->on('users')->onDelete('cascade');
+            $table->foreign('team_id')->references('id')->on('teams')->onDelete('cascade');
+            $table->foreign('cancelled_by')->references('id')->on('users');
+
             $table->timestamps();
         });
     }
