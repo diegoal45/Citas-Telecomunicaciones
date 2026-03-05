@@ -14,7 +14,16 @@ class CancelAppointmentRequest extends FormRequest
     public function rules()
     {
         return [
-            'reason' => 'nullable|string|max:255'
+            'reason' => 'required|string|max:255'
+        ];
+    }
+
+    public function messages()
+    {
+        return [
+            'reason.required' => 'La razón de cancelación es obligatoria',
+            'reason.string' => 'La razón debe ser texto',
+            'reason.max' => 'La razón no debe exceder 255 caracteres'
         ];
     }
 }

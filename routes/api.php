@@ -47,6 +47,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::apiResource('teams', TeamController::class);
     Route::post('/teams/{id}/members', [TeamController::class, 'addMembers']);
     Route::delete('/teams/{id}/members/{memberId}', [TeamController::class, 'removeMember']);
+    Route::post('/teams/{id}/members/{memberId}/change', [TeamController::class, 'changeMember']);
     
     // =======================================
     // CITAS
@@ -56,6 +57,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/appointments/{id}/reschedule', [AppointmentController::class, 'reschedule']);
     Route::post('/appointments/{id}/assign-team', [AppointmentController::class, 'assignTeam']);
     Route::post('/appointments/{id}/mark-cotizada', [AppointmentController::class, 'markAsCotizada']);
+    Route::post('/appointments/{id}/mark-executed', [AppointmentController::class, 'markAsExecuted']);
     
     // =======================================
     // COTIZACIONES

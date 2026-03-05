@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Appointment;
 use App\Models\User;
+use App\Models\Notification;
 use App\Http\Requests\StoreAppointmentRequest;
 use App\Http\Requests\AssignTeamRequest;
 use App\Http\Requests\CancelAppointmentRequest;
@@ -92,6 +93,18 @@ class AppointmentController extends Controller
             'description' => $request->description
         ]);
 
+        // Notificar al cliente que su cita fue creada
+        Notification::create([
+            'user_id' => Auth::id(),
+            'type' => 'appointment_created',
+            'title' => 'Cita creada',
+            'message' => 'Tu cita ha sido registrada exitosamente',
+            'data' => [
+                'appointment_id' => $appointment->id,
+                'scheduled_date' => $appointment->scheduled_date
+            ]
+        ]);
+
         return response()->json($appointment->load('team'), 201);
     }
 
@@ -120,9 +133,10 @@ class AppointmentController extends Controller
                 ->orderBy('scheduled_date')
                 ->get();
         } elseif ($user->role->name === 'tecnico') {
-            // Técnico ve solo equipos donde es miembro
+            // Técnico ve solo citas aprobadas o programadas (ejecución) de sus equipos
             $teamIds = $user->teams()->pluck('team_id');
             $appointments = Appointment::whereIn('team_id', $teamIds)
+                ->whereIn('status', ['aprobada', 'programada'])
                 ->with('client', 'team', 'quotation')
                 ->orderBy('scheduled_date')
                 ->get();
@@ -156,6 +170,11 @@ class AppointmentController extends Controller
         if (in_array($user->role->name, ['tecnico_lider', 'tecnico'])) {
             $teamIds = $user->teams()->pluck('team_id');
             if (!$appointment->team_id || !in_array($appointment->team_id, $teamIds->toArray())) {
+                return response()->json(['error' => 'No autorizado'], 403);
+            }
+            
+            // Técnico normal solo ve citas aprobadas o programadas
+            if ($user->role->name === 'tecnico' && !in_array($appointment->status, ['aprobada', 'programada'])) {
                 return response()->json(['error' => 'No autorizado'], 403);
             }
         }
@@ -195,6 +214,36 @@ class AppointmentController extends Controller
             'cancellation_reason' => $request->reason
         ]);
 
+        // Notificar al cliente que su cita fue cancelada
+        Notification::create([
+            'user_id' => $appointment->client_id,
+            'type' => 'appointment_cancelled',
+            'title' => 'Cita cancelada',
+            'message' => "Tu cita ha sido cancelada. Motivo: {$request->reason}",
+            'data' => [
+                'appointment_id' => $appointment->id,
+                'reason' => $request->reason
+            ]
+        ]);
+
+        // Notificar al equipo que la cita fue cancelada
+        if ($appointment->team) {
+            $teamMembers = $appointment->team->members()->get();
+            foreach ($teamMembers as $member) {
+                Notification::create([
+                    'user_id' => $member->id,
+                    'type' => 'appointment_cancelled_team',
+                    'title' => 'Cita cancelada',
+                    'message' => "La cita del cliente {$appointment->client->name} ha sido cancelada. Motivo: {$request->reason}",
+                    'data' => [
+                        'appointment_id' => $appointment->id,
+                        'client_name' => $appointment->client->name,
+                        'reason' => $request->reason
+                    ]
+                ]);
+            }
+        }
+
         return response()->json(['message' => 'Cita cancelada correctamente']);
     }
 
@@ -217,6 +266,24 @@ class AppointmentController extends Controller
             'status' => 'pendiente_cotizacion'
         ]);
 
+        // Notificar a los miembros del equipo asignado
+        $team = \App\Models\Team::findOrFail($request->team_id);
+        $teamMembers = $team->members()->get();
+        
+        foreach ($teamMembers as $member) {
+            Notification::create([
+                'user_id' => $member->id,
+                'type' => 'appointment_assigned',
+                'title' => 'Nueva cita asignada',
+                'message' => "Se te ha asignado una cotización para el cliente {$appointment->client->name}",
+                'data' => [
+                    'appointment_id' => $appointment->id,
+                    'client_name' => $appointment->client->name,
+                    'scheduled_date' => $appointment->scheduled_date
+                ]
+            ]);
+        }
+
         return response()->json($appointment);
     }
 
@@ -230,6 +297,19 @@ class AppointmentController extends Controller
         }
 
         $appointment->update(['status' => 'cotizada']);
+        
+        // Notificar al cliente que su cotización está lista
+        Notification::create([
+            'user_id' => $appointment->client_id,
+            'type' => 'quotation_ready',
+            'title' => 'Cotización lista',
+            'message' => "Tu cotización está lista para revisar",
+            'data' => [
+                'appointment_id' => $appointment->id,
+                'team_name' => $appointment->team->name
+            ]
+        ]);
+        
         return response()->json(['message' => 'Cita marcada como cotizada']);
     }
 
@@ -242,11 +322,103 @@ class AppointmentController extends Controller
             return response()->json(['error' => 'No autorizado'], 403);
         }
 
+        $oldDate = $appointment->scheduled_date;
+        
+        // Si la cita fue cancelada, restaurar el estado anterior (aprobada)
+        // Si no fue cancelada, mantener lógica normal
+        $newStatus = $appointment->status === 'cancelada' ? 'aprobada' : ($appointment->status === 'solicitada' ? 'solicitada' : 'aprobada');
+        
         $appointment->update([
             'scheduled_date' => $request->new_date,
-            'status' => 'solicitada'
+            'status' => $newStatus
+        ]);
+
+        // Notificar al equipo que la cita fue reprogramada
+        if ($appointment->team) {
+            $teamMembers = $appointment->team->members()->get();
+            foreach ($teamMembers as $member) {
+                Notification::create([
+                    'user_id' => $member->id,
+                    'type' => 'appointment_rescheduled',
+                    'title' => 'Cita reprogramada',
+                    'message' => "La cita del cliente {$appointment->client->name} ha sido reprogramada del " . Carbon::parse($oldDate)->format('d/m/Y H:i') . " al " . Carbon::parse($request->new_date)->format('d/m/Y H:i'),
+                    'data' => [
+                        'appointment_id' => $appointment->id,
+                        'client_name' => $appointment->client->name,
+                        'old_date' => $oldDate,
+                        'new_date' => $request->new_date
+                    ]
+                ]);
+            }
+        }
+
+        // Notificar al cliente que su cita fue reprogramada
+        Notification::create([
+            'user_id' => $appointment->client_id,
+            'type' => 'appointment_rescheduled_client',
+            'title' => 'Cita reprogramada',
+            'message' => "Tu cita ha sido reprogramada para el " . Carbon::parse($request->new_date)->format('d/m/Y H:i'),
+            'data' => [
+                'appointment_id' => $appointment->id,
+                'new_date' => $request->new_date
+            ]
         ]);
 
         return response()->json($appointment);
+    }
+
+    public function markAsExecuted($id)
+    {
+        $appointment = Appointment::findOrFail($id);
+        $user = Auth::user();
+
+        // Solo técnico líder o admin pueden marcar como ejecutada
+        if (!in_array($user->role->name, ['tecnico_lider', 'admin'])) {
+            return response()->json(['error' => 'Solo técnico líder o admin pueden marcar como ejecutada'], 403);
+        }
+
+        // Verificar que sea cita de ejecución
+        if ($appointment->appointment_type !== 'ejecucion') {
+            return response()->json(['error' => 'Solo citas de ejecución pueden ser marcadas como ejecutadas'], 400);
+        }
+
+        // Verificar que sea del equipo del técnico líder
+        if ($user->role->name === 'tecnico_lider' && $appointment->team->leader_id !== $user->id) {
+            return response()->json(['error' => 'No eres el líder del equipo asignado'], 403);
+        }
+
+        $appointment->update(['status' => 'ejecutada']);
+
+        // Notificar al cliente que la ejecución fue completada
+        Notification::create([
+            'user_id' => $appointment->client_id,
+            'type' => 'execution_completed',
+            'title' => 'Ejecución completada',
+            'message' => 'Tu ejecución ha sido completada exitosamente',
+            'data' => [
+                'appointment_id' => $appointment->id,
+                'completed_date' => Carbon::now()
+            ]
+        ]);
+
+        // Notificar al equipo que la ejecución fue completada
+        if ($appointment->team) {
+            $teamMembers = $appointment->team->members()->get();
+            foreach ($teamMembers as $member) {
+                Notification::create([
+                    'user_id' => $member->id,
+                    'type' => 'execution_completed_team',
+                    'title' => 'Ejecución completada',
+                    'message' => "La ejecución para el cliente {$appointment->client->name} ha sido completada",
+                    'data' => [
+                        'appointment_id' => $appointment->id,
+                        'client_name' => $appointment->client->name,
+                        'completed_date' => Carbon::now()
+                    ]
+                ]);
+            }
+        }
+
+        return response()->json(['message' => 'Cita marcada como ejecutada']);
     }
 }
