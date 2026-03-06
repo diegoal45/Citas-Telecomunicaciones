@@ -3,40 +3,14 @@
         <template #nav-actions>
             <NotificationBell :count="unreadNotifications" @click="toggleNotifications" />
         </template>
-
-        <!-- Overlay -->
-        <div class="overlay" :class="{ 'show': showNotifications }" @click="showNotifications = false"></div>
-
-        <!-- Panel de Notificaciones -->
-        <div class="notifications-panel" :class="{ 'show': showNotifications }">
-            <div class="panel-header">
-                <h3>Notificaciones</h3>
-                <button class="close-btn" @click="toggleNotifications">
-                    <i class="bi bi-x-lg"></i>
-                </button>
-            </div>
-            <div class="panel-body">
-                <div v-if="notifications.length === 0" class="empty-state">
-                    <i class="bi bi-bell-slash"></i>
-                    <p>No hay notificaciones</p>
-                </div>
-                <div v-else class="notifications-list">
-                    <div v-for="notif in notifications" :key="notif.id" 
-                         class="notification-item" 
-                         :class="{ 'unread': !notif.is_read }"
-                         @click="markAsRead(notif.id)">
-                        <div class="notif-icon" :class="notificationTypeClass(notif.type)">
-                            <i :class="notificationIcon(notif.type)"></i>
-                        </div>
-                        <div class="notif-content">
-                            <p class="notif-message">{{ notif.message }}</p>
-                            <span class="notif-time">{{ formatNotificationTime(notif.created_at) }}</span>
-                        </div>
-                        <div v-if="!notif.is_read" class="unread-dot"></div>
-                    </div>
-                </div>
-            </div>
-        </div>
+        <NotificationPanel
+            :show="showNotifications"
+            :notifications="notifications"
+            :show-time="true"
+            :format-time="formatNotificationTime"
+            @close="showNotifications = false"
+            @mark-one="markAsRead"
+        />
 
         <!-- Contenido Principal -->
         <main class="main-content">
@@ -184,6 +158,7 @@
 import { ref, onMounted, computed } from 'vue';
 import AppLayout from '../../Layouts/AppLayout.vue';
 import NotificationBell from '../../Components/NotificationBell.vue';
+import NotificationPanel from '../../Components/NotificationPanel.vue';
 import api from '../../services/api';
 
 const appointments = ref([]);
@@ -531,155 +506,6 @@ onMounted(() => {
     font-weight: 600;
     color: #1f2937;
     font-size: 0.9rem;
-}
-
-/* Panel de Notificaciones */
-.notifications-panel {
-    position: fixed;
-    top: 0;
-    right: -400px;
-    width: 400px;
-    height: 100vh;
-    background: white;
-    box-shadow: -5px 0 30px rgba(0, 0, 0, 0.2);
-    z-index: 1000;
-    transition: right 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-    display: flex;
-    flex-direction: column;
-}
-
-.notifications-panel.show {
-    right: 0;
-}
-
-.panel-header {
-    padding: 1.5rem;
-    border-bottom: 1px solid #e5e7eb;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-}
-
-.panel-header h3 {
-    font-size: 1.25rem;
-    font-weight: 700;
-    color: #1f2937;
-    margin: 0;
-}
-
-.close-btn {
-    background: #f3f4f6;
-    border: none;
-    width: 32px;
-    height: 32px;
-    border-radius: 8px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    cursor: pointer;
-    transition: all 0.3s;
-    color: #6b7280;
-}
-
-.close-btn:hover {
-    background: #e5e7eb;
-}
-
-.panel-body {
-    flex: 1;
-    overflow-y: auto;
-}
-
-.notifications-list {
-    padding: 0.5rem;
-}
-
-.notification-item {
-    display: flex;
-    align-items: start;
-    gap: 1rem;
-    padding: 1rem;
-    border-radius: 12px;
-    margin-bottom: 0.5rem;
-    cursor: pointer;
-    transition: all 0.3s;
-    position: relative;
-}
-
-.notification-item:hover {
-    background: #f9fafb;
-}
-
-.notification-item.unread {
-    background: #eff6ff;
-}
-
-.notification-item.unread:hover {
-    background: #dbeafe;
-}
-
-.notif-icon {
-    width: 40px;
-    height: 40px;
-    border-radius: 10px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    flex-shrink: 0;
-    color: white;
-    font-size: 1.1rem;
-}
-
-.notif-appointment {
-    background: linear-gradient(135deg, #0d6efd 0%, #0a58ca 100%);
-}
-
-.notif-quotation {
-    background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
-}
-
-.notif-system {
-    background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
-}
-
-.notif-content {
-    flex: 1;
-}
-
-.notif-message {
-    color: #1f2937;
-    font-size: 0.9rem;
-    margin: 0 0 0.25rem 0;
-    line-height: 1.4;
-}
-
-.notif-time {
-    color: #9ca3af;
-    font-size: 0.75rem;
-}
-
-.unread-dot {
-    width: 8px;
-    height: 8px;
-    background: #3b82f6;
-    border-radius: 50%;
-    flex-shrink: 0;
-}
-
-/* Overlay */
-.overlay {
-    position: fixed;
-    inset: 0;
-    background: rgba(0, 0, 0, 0.5);
-    z-index: 999;
-    opacity: 0;
-    pointer-events: none;
-    transition: opacity 0.3s;
-}
-
-.overlay.show {
-    opacity: 1;
-    pointer-events: auto;
 }
 
 /* Contenido Principal */
@@ -1151,11 +977,6 @@ onMounted(() => {
     
     .stats-grid {
         grid-template-columns: 1fr;
-    }
-    
-    .notifications-panel {
-        width: 100%;
-        right: -100%;
     }
     
     .user-name {
