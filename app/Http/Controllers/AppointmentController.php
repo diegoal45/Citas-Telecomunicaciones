@@ -286,19 +286,25 @@ class AppointmentController extends Controller
         ]);
 
         // Notificar a los miembros del equipo asignado
-        $team = \App\Models\Team::findOrFail($request->team_id);
+        $team = \App\Models\Team::with('leader')->findOrFail($request->team_id);
         $teamMembers = $team->members()->get();
+        $teamLederName = $team->leader ? $team->leader->name : 'N/A';
         
         foreach ($teamMembers as $member) {
             Notification::create([
                 'user_id' => $member->id,
                 'type' => 'appointment_assigned',
                 'title' => 'Nueva cita asignada',
-                'message' => "Se te ha asignado una cotización para el cliente {$appointment->client->name}",
+                'message' => "{$user->name} te asignó una cotización del cliente {$appointment->client->name} al equipo {$team->name}. El técnico {$teamLederName} será quien irá.",
                 'data' => [
                     'appointment_id' => $appointment->id,
+                    'team_id' => $team->id,
+                    'team_name' => $team->name,
                     'client_name' => $appointment->client->name,
-                    'scheduled_date' => $appointment->scheduled_date
+                    'scheduled_date' => $appointment->scheduled_date,
+                    'assigned_by' => $user->name,
+                    'lead_technician' => $teamLederName,
+                    'lead_technician_id' => $team->leader_id,
                 ]
             ]);
         }

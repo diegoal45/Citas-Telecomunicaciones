@@ -155,14 +155,14 @@
 </template>
 
 <script setup>
-import { ref, onMounted, computed } from 'vue';
+import { ref, onMounted } from 'vue';
 import AppLayout from '../../Layouts/AppLayout.vue';
 import NotificationBell from '../../Components/NotificationBell.vue';
 import NotificationPanel from '../../Components/NotificationPanel.vue';
+import { useNotifications } from '../../composables/useNotifications';
 import api from '../../services/api';
 
 const appointments = ref([]);
-const notifications = ref([]);
 const userProfile = ref({
     name: 'Usuario',
     email: '',
@@ -170,13 +170,20 @@ const userProfile = ref({
     profile_photo_path: null,
     profile_photo_url: null
 });
-const showNotifications = ref(false);
 const loadingAppointments = ref(false);
 const loadingProfile = ref(false);
-const loadingNotifications = ref(false);
 
-const unreadNotifications = computed(() => {
-    return notifications.value.filter(n => !n.is_read).length;
+const {
+    notifications,
+    showNotifications,
+    unreadNotifications,
+    loadNotifications,
+    toggleNotifications,
+    markAsRead,
+    startPolling,
+} = useNotifications({
+    autoCloseOnMark: false,
+    onError: (message, err) => console.error(message, err),
 });
 
 const loadUserProfile = async () => {
@@ -207,40 +214,6 @@ const loadAppointments = async () => {
     } finally {
         loadingAppointments.value = false;
     }
-};
-
-const loadNotifications = async () => {
-    loadingNotifications.value = true;
-    try {
-        const response = await api.get('/api/notifications');
-        notifications.value = response.data.data || response.data || [];
-    } catch (error) {
-        console.error('Error cargando notificaciones:', error);
-        notifications.value = [];
-    } finally {
-        loadingNotifications.value = false;
-    }
-};
-
-const markAsRead = async (notificationId) => {
-    try {
-        await api.put(`/api/notifications/${notificationId}/read`, {});
-        
-        // Actualizar el estado local
-        const notification = notifications.value.find(n => n.id === notificationId);
-        if (notification) {
-            notification.is_read = true;
-        }
-
-        // Cerrar el panel al seleccionar una notificacion
-        showNotifications.value = false;
-    } catch (error) {
-        console.error('Error marcando notificación como leída:', error);
-    }
-};
-
-const toggleNotifications = () => {
-    showNotifications.value = !showNotifications.value;
 };
 
 const goToAppointments = () => {
@@ -286,24 +259,6 @@ const statusClass = (status) => {
     return statusMap[status] || 'status-default';
 };
 
-const notificationTypeClass = (type) => {
-    const typeMap = {
-        'appointment': 'notif-appointment',
-        'quotation': 'notif-quotation',
-        'system': 'notif-system'
-    };
-    return typeMap[type] || 'notif-default';
-};
-
-const notificationIcon = (type) => {
-    const iconMap = {
-        'appointment': 'bi bi-calendar-check-fill',
-        'quotation': 'bi bi-file-earmark-text-fill',
-        'system': 'bi bi-info-circle-fill'
-    };
-    return iconMap[type] || 'bi bi-bell-fill';
-};
-
 const uploadProfilePhoto = async (event) => {
     const file = event.target.files[0];
     if (!file) return;
@@ -331,9 +286,7 @@ onMounted(() => {
     loadUserProfile();
     loadAppointments();
     loadNotifications();
-    
-    // Recargar notificaciones cada 30 segundos
-    setInterval(loadNotifications, 30000);
+    startPolling(30000);
 });
 </script>
 

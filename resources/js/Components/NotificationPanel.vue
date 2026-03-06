@@ -27,7 +27,7 @@
                 :key="n.id"
                 class="btn text-start border rounded-3 p-2"
                 :class="n.is_read ? 'btn-light' : 'btn-primary-subtle border-primary-subtle'"
-                @click="$emit('mark-one', n.id)"
+                @click="handleNotificationClick(n)"
             >
                 <div class="fw-semibold small">{{ n.title || 'Notificacion' }}</div>
                 <div class="small text-muted">{{ n.message }}</div>
@@ -36,11 +36,38 @@
                 </div>
             </button>
         </div>
+
+        <div v-if="selectedNotification && show" class="notify-detail-backdrop" @click="closeDetail"></div>
+        <div v-if="selectedNotification && show" class="notify-detail-modal">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h6 class="mb-0 fw-bold">Detalle de notificacion</h6>
+                <button class="btn btn-sm btn-outline-secondary" @click="closeDetail">Cerrar</button>
+            </div>
+
+            <div class="mb-2">
+                <div class="fw-semibold">{{ selectedNotification.title || 'Notificacion' }}</div>
+                <div class="text-muted small">{{ selectedNotification.message }}</div>
+            </div>
+
+            <div v-if="showTime && typeof formatTime === 'function'" class="small text-muted mb-3">
+                {{ formatTime(selectedNotification.created_at) }}
+            </div>
+
+            <div v-if="detailEntries.length > 0" class="border rounded-3 p-2 bg-light-subtle">
+                <div class="small fw-semibold mb-2">Informacion adicional</div>
+                <div v-for="entry in detailEntries" :key="entry.key" class="small d-flex justify-content-between gap-2 py-1 border-bottom">
+                    <span class="text-muted text-capitalize">{{ formatKey(entry.key) }}</span>
+                    <span class="text-end">{{ entry.value }}</span>
+                </div>
+            </div>
+        </div>
     </div>
 </template>
 
 <script setup>
-defineProps({
+import { computed, ref } from 'vue';
+
+const props = defineProps({
     show: {
         type: Boolean,
         default: false,
@@ -79,7 +106,36 @@ defineProps({
     },
 });
 
-defineEmits(['close', 'mark-one', 'mark-all']);
+const emit = defineEmits(['close', 'mark-one', 'mark-all']);
+
+const selectedNotification = ref(null);
+
+const detailEntries = computed(() => {
+    if (!selectedNotification.value || !selectedNotification.value.data) return [];
+
+    const payload = selectedNotification.value.data;
+    if (typeof payload !== 'object') return [];
+
+    return Object.entries(payload)
+        .filter(([, value]) => value !== null && value !== undefined && `${value}`.trim() !== '')
+        .map(([key, value]) => ({
+            key,
+            value: Array.isArray(value) ? value.join(', ') : `${value}`,
+        }));
+});
+
+const formatKey = (key) => {
+    return `${key}`.replace(/_/g, ' ');
+};
+
+const closeDetail = () => {
+    selectedNotification.value = null;
+};
+
+const handleNotificationClick = (notification) => {
+    emit('mark-one', notification.id);
+    selectedNotification.value = notification;
+};
 </script>
 
 <style scoped>
@@ -111,5 +167,27 @@ defineEmits(['close', 'mark-one', 'mark-all']);
 
 .xsmall {
     font-size: 0.72rem;
+}
+
+.notify-detail-backdrop {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.45);
+    z-index: 1052;
+}
+
+.notify-detail-modal {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: min(560px, 92vw);
+    max-height: 80vh;
+    overflow-y: auto;
+    background: #fff;
+    border-radius: 12px;
+    box-shadow: 0 1rem 2rem rgba(0, 0, 0, 0.25);
+    z-index: 1053;
+    padding: 1rem;
 }
 </style>

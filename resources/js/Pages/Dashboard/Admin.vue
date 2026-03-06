@@ -446,6 +446,7 @@ import { ref, computed, onMounted } from 'vue';
 import AppLayout from '../../Layouts/AppLayout.vue';
 import NotificationBell from '../../Components/NotificationBell.vue';
 import NotificationPanel from '../../Components/NotificationPanel.vue';
+import { useNotifications } from '../../composables/useNotifications';
 import api from '../../services/api';
 import { getStoredUser } from '../../services/auth';
 
@@ -454,9 +455,6 @@ const error = ref('');
 const users = ref([]);
 const teams = ref([]);
 const appointments = ref([]);
-const notifications = ref([]);
-const showNotifications = ref(false);
-const markingAllRead = ref(false);
 const roles = ref([]);
 const selectedRoles = ref({});
 const savingRoles = ref({});
@@ -495,6 +493,22 @@ const usersPagination = ref({
     total: 0,
 });
 const currentUserId = ref(getStoredUser()?.id || null);
+
+const {
+    notifications,
+    showNotifications,
+    markingAllRead,
+    unreadNotifications,
+    loadNotifications,
+    toggleNotifications,
+    markAsRead,
+    markAllAsRead,
+    startPolling,
+} = useNotifications({
+    onError: (message) => {
+        error.value = message;
+    },
+});
 
 const roleCounts = computed(() => {
     return usersSummary.value.byRole;
@@ -556,8 +570,6 @@ const metrics = computed(() => ({
     pendingAttention: adminQueue.value.length,
     scheduledExecutions: appointments.value.filter((a) => a.status === 'programada').length,
 }));
-
-const unreadNotifications = computed(() => notifications.value.filter((n) => !n.is_read).length);
 
 const technicianUsers = computed(() => {
     // Solo usuarios con rol tecnico_lider (excluyendo al admin actual)
@@ -627,17 +639,16 @@ const loadData = async () => {
     error.value = '';
 
     try {
-        const [teamsRes, appointmentsRes, rolesRes, notificationsRes] = await Promise.all([
+        const [teamsRes, appointmentsRes, rolesRes] = await Promise.all([
             api.get('/api/teams'),
             api.get('/api/appointments'),
             api.get('/api/roles'),
-            api.get('/api/notifications'),
+            loadNotifications(),
         ]);
 
         teams.value = teamsRes.data || [];
         appointments.value = appointmentsRes.data || [];
         roles.value = rolesRes.data || [];
-        notifications.value = notificationsRes.data || [];
 
         await Promise.all([loadUsersSummary(), loadUsers(1)]);
     } catch (err) {
@@ -648,36 +659,6 @@ const loadData = async () => {
         }
     } finally {
         loading.value = false;
-    }
-};
-
-const toggleNotifications = () => {
-    showNotifications.value = !showNotifications.value;
-};
-
-const markAsRead = async (notificationId) => {
-    try {
-        await api.put(`/api/notifications/${notificationId}/read`);
-        const item = notifications.value.find((n) => n.id === notificationId);
-        if (item) {
-            item.is_read = true;
-        }
-    } catch (err) {
-        error.value = 'No se pudo marcar la notificacion como leida.';
-    }
-};
-
-const markAllAsRead = async () => {
-    if (unreadNotifications.value === 0) return;
-
-    markingAllRead.value = true;
-    try {
-        await api.put('/api/notifications/read-all');
-        notifications.value = notifications.value.map((n) => ({ ...n, is_read: true }));
-    } catch (err) {
-        error.value = 'No se pudieron marcar todas las notificaciones como leidas.';
-    } finally {
-        markingAllRead.value = false;
     }
 };
 
@@ -977,14 +958,7 @@ const formatDate = (date) => {
 
 onMounted(() => {
     loadData();
-    setInterval(async () => {
-        try {
-            const response = await api.get('/api/notifications');
-            notifications.value = response.data || [];
-        } catch (err) {
-            // No bloquear UI si falla el polling
-        }
-    }, 30000);
+    startPolling(30000);
 });
 </script>
 
