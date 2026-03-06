@@ -1,137 +1,192 @@
 <template>
-    <AppLayout brand-href="/admin/dashboard" brand-label="Admin ExCitel" brand-icon="bi bi-shield-lock-fill">
+    <AppLayout brand-href="/admin/dashboard" brand-label="Admin ExCitel" brand-icon="bi bi-shield-lock-fill" page-class="dashboard-container">
         <template #nav-actions>
             <NotificationBell :count="unreadNotifications" @click="toggleNotifications" />
         </template>
 
-        <main class="container-fluid px-3 px-md-4 py-4">
-            <div class="d-flex justify-content-between align-items-start mb-3 flex-wrap gap-2">
+        <main class="container-fluid px-3 px-md-4 py-3">
+            <!-- Header -->
+            <div class="d-flex justify-content-between align-items-center mb-4">
                 <div>
-                    <h3 class="mb-1">Panel de Administracion</h3>
-                    <p class="text-muted mb-0">Gestion de usuarios, equipos y flujo de citas</p>
+                    <h3 class="mb-0 fw-bold">Panel de Administración</h3>
+                    <p class="text-muted small mb-0">Gestión integral del sistema</p>
                 </div>
-                <button class="btn btn-primary" @click="loadData" :disabled="loading">
-                    <span v-if="loading" class="spinner-border spinner-border-sm me-2"></span>
-                    {{ loading ? 'Actualizando...' : 'Actualizar datos' }}
+                <button class="btn btn-sm btn-outline-primary" @click="loadData" :disabled="loading">
+                    <i class="bi bi-arrow-clockwise me-1"></i>
+                    {{ loading ? 'Actualizando...' : 'Actualizar' }}
                 </button>
             </div>
 
-            <div v-if="error" class="alert alert-danger mb-3">{{ error }}</div>
-
-            <div class="row g-3 mb-4">
-                <div class="col-12 col-sm-6 col-xl-3">
-                    <div class="card border-0 shadow-sm h-100">
-                        <div class="card-body">
-                            <small class="text-muted">Usuarios Totales</small>
-                            <h4 class="mb-0 fw-bold text-primary">{{ metrics.totalUsers }}</h4>
-                        </div>
-                    </div>
-                </div>
-                <div class="col-12 col-sm-6 col-xl-3">
-                    <div class="card border-0 shadow-sm h-100">
-                        <div class="card-body">
-                            <small class="text-muted">Equipos</small>
-                            <h4 class="mb-0 fw-bold text-info">{{ metrics.totalTeams }}</h4>
-                        </div>
-                    </div>
-                </div>
-                <div class="col-12 col-sm-6 col-xl-3">
-                    <div class="card border-0 shadow-sm h-100">
-                        <div class="card-body">
-                            <small class="text-muted">Citas por atender</small>
-                            <h4 class="mb-0 fw-bold text-warning">{{ metrics.pendingAttention }}</h4>
-                        </div>
-                    </div>
-                </div>
-                <div class="col-12 col-sm-6 col-xl-3">
-                    <div class="card border-0 shadow-sm h-100">
-                        <div class="card-body">
-                            <small class="text-muted">Ejecuciones Programadas</small>
-                            <h4 class="mb-0 fw-bold text-success">{{ metrics.scheduledExecutions }}</h4>
-                        </div>
-                    </div>
-                </div>
+            <div v-if="error" class="alert alert-danger alert-dismissible fade show mb-3" role="alert">
+                {{ error }}
+                <button type="button" class="btn-close" @click="error = ''"></button>
             </div>
 
+            <!-- Métricas principales -->
             <div class="row g-3 mb-3">
-                <div class="col-12 col-lg-4">
-                    <div class="card border-0 shadow-sm h-100">
-                        <div class="card-header bg-white border-0 pb-0">
-                            <h6 class="mb-0 fw-bold">Usuarios por Rol</h6>
-                        </div>
-                        <div class="card-body">
-                            <ul class="list-group list-group-flush">
-                                <li class="list-group-item d-flex justify-content-between px-0">
-                                    <span>Administradores</span>
-                                    <span class="fw-bold">{{ roleCounts.admin }}</span>
-                                </li>
-                                <li class="list-group-item d-flex justify-content-between px-0">
-                                    <span>Tecnicos Lideres</span>
-                                    <span class="fw-bold">{{ roleCounts.tecnico_lider }}</span>
-                                </li>
-                                <li class="list-group-item d-flex justify-content-between px-0">
-                                    <span>Tecnicos</span>
-                                    <span class="fw-bold">{{ roleCounts.tecnico }}</span>
-                                </li>
-                                <li class="list-group-item d-flex justify-content-between px-0">
-                                    <span>Clientes</span>
-                                    <span class="fw-bold">{{ roleCounts.cliente }}</span>
-                                </li>
-                            </ul>
+                <div class="col-6 col-lg-3">
+                    <div class="card border-0 shadow-sm h-100" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
+                        <div class="card-body text-white p-3">
+                            <div class="d-flex align-items-center justify-content-between">
+                                <div>
+                                    <div class="small opacity-75 mb-1">Usuarios</div>
+                                    <h3 class="mb-0 fw-bold">{{ metrics.totalUsers }}</h3>
+                                </div>
+                                <i class="bi bi-people-fill" style="font-size: 2rem; opacity: 0.5;"></i>
+                            </div>
                         </div>
                     </div>
                 </div>
-
-                <div class="col-12 col-lg-4">
-                    <div class="card border-0 shadow-sm h-100">
-                        <div class="card-header bg-white border-0 pb-0">
-                            <h6 class="mb-0 fw-bold">Citas por Estado</h6>
-                        </div>
-                        <div class="card-body">
-                            <ul class="list-group list-group-flush">
-                                <li class="list-group-item d-flex justify-content-between px-0" v-for="item in appointmentsByStatus" :key="item.status">
-                                    <span class="text-capitalize">{{ formatStatus(item.status) }}</span>
-                                    <span class="fw-bold">{{ item.total }}</span>
-                                </li>
-                                <li v-if="appointmentsByStatus.length === 0" class="text-muted small">Sin datos</li>
-                            </ul>
+                <div class="col-6 col-lg-3">
+                    <div class="card border-0 shadow-sm h-100" style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);">
+                        <div class="card-body text-white p-3">
+                            <div class="d-flex align-items-center justify-content-between">
+                                <div>
+                                    <div class="small opacity-75 mb-1">Equipos</div>
+                                    <h3 class="mb-0 fw-bold">{{ metrics.totalTeams }}</h3>
+                                </div>
+                                <i class="bi bi-diagram-3-fill" style="font-size: 2rem; opacity: 0.5;"></i>
+                            </div>
                         </div>
                     </div>
                 </div>
-
-                <div class="col-12 col-lg-4">
-                    <div class="card border-0 shadow-sm h-100">
-                        <div class="card-header bg-white border-0 pb-0">
-                            <h6 class="mb-0 fw-bold">Equipos y Rendimiento</h6>
+                <div class="col-6 col-lg-3">
+                    <div class="card border-0 shadow-sm h-100" style="background: linear-gradient(135deg, #ffecd2 0%, #fcb69f 100%);">
+                        <div class="card-body text-dark p-3">
+                            <div class="d-flex align-items-center justify-content-between">
+                                <div>
+                                    <div class="small opacity-75 mb-1">Por Atender</div>
+                                    <h3 class="mb-0 fw-bold">{{ metrics.pendingAttention }}</h3>
+                                </div>
+                                <i class="bi bi-exclamation-triangle-fill" style="font-size: 2rem; opacity: 0.4;"></i>
+                            </div>
                         </div>
-                        <div class="card-body">
-                            <ul class="list-group list-group-flush">
-                                <li class="list-group-item px-0" v-for="team in topTeams" :key="team.id">
-                                    <div class="d-flex justify-content-between mb-1">
-                                        <span class="fw-semibold">{{ team.name }}</span>
-                                        <span class="badge text-bg-primary">{{ team.totalAppointments }} total</span>
-                                    </div>
-                                    <div class="d-flex gap-2 mb-1">
-                                        <span class="badge text-bg-warning">{{ team.activeAppointments }} activas</span>
-                                        <span class="badge text-bg-success">{{ team.completedAppointments }} completadas</span>
-                                        <span class="badge text-bg-secondary">{{ team.cancelledAppointments }} canceladas</span>
-                                    </div>
-                                    <small class="text-muted">
-                                        Líder: {{ team.leaderName }} | Miembros: {{ team.membersCount }}
-                                    </small>
-                                </li>
-                                <li v-if="topTeams.length === 0" class="text-muted small">Sin equipos</li>
-                            </ul>
+                    </div>
+                </div>
+                <div class="col-6 col-lg-3">
+                    <div class="card border-0 shadow-sm h-100" style="background: linear-gradient(135deg, #a8edea 0%, #fed6e3 100%);">
+                        <div class="card-body text-dark p-3">
+                            <div class="d-flex align-items-center justify-content-between">
+                                <div>
+                                    <div class="small opacity-75 mb-1">Programadas</div>
+                                    <h3 class="mb-0 fw-bold">{{ metrics.scheduledExecutions }}</h3>
+                                </div>
+                                <i class="bi bi-calendar-check-fill" style="font-size: 2rem; opacity: 0.4;"></i>
+                            </div>
                         </div>
                     </div>
                 </div>
             </div>
 
-            <div class="card border-0 shadow-sm">
-                <div class="card-header bg-white border-0 d-flex justify-content-between align-items-center">
-                    <h6 class="mb-0 fw-bold">Citas que Requieren Gestion del Admin</h6>
-                    <small class="text-muted">{{ adminQueueTotal }} total</small>
+            <!-- Tabs de navegación -->
+            <ul class="nav nav-pills mb-3" role="tablist">
+                <li class="nav-item" role="presentation">
+                    <button 
+                        class="nav-link" 
+                        :class="{ active: activeTab === 'resumen' }"
+                        @click="activeTab = 'resumen'"
+                        type="button"
+                    >
+                        <i class="bi bi-speedometer2 me-1"></i> Resumen
+                    </button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button 
+                        class="nav-link" 
+                        :class="{ active: activeTab === 'citas' }"
+                        @click="activeTab = 'citas'"
+                        type="button"
+                    >
+                        <i class="bi bi-calendar-event me-1"></i> Citas
+                    </button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button 
+                        class="nav-link" 
+                        :class="{ active: activeTab === 'equipos' }"
+                        @click="activeTab = 'equipos'"
+                        type="button"
+                    >
+                        <i class="bi bi-people me-1"></i> Equipos
+                    </button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button 
+                        class="nav-link" 
+                        :class="{ active: activeTab === 'usuarios' }"
+                        @click="activeTab = 'usuarios'"
+                        type="button"
+                    >
+                        <i class="bi bi-person-gear me-1"></i> Usuarios
+                    </button>
+                </li>
+            </ul>
+
+            <!-- Contenido de pestañas -->
+            
+            <!-- Tab: Resumen -->
+            <div v-show="activeTab === 'resumen'">
+                <div class="row g-3 mb-3">
+                    <div class="col-12 col-md-4">
+                        <div class="card border-0 shadow-sm h-100">
+                            <div class="card-header bg-white border-0">
+                                <h6 class="mb-0 fw-bold"><i class="bi bi-person-badge me-2"></i>Usuarios por Rol</h6>
+                            </div>
+                            <div class="card-body p-3">
+                                <div class="d-flex justify-content-between align-items-center mb-2" v-for="(count, role) in roleCounts" :key="role">
+                                    <span class="text-capitalize small">{{ role.replace('_', ' ') }}</span>
+                                    <span class="badge bg-primary">{{ count }}</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="col-12 col-md-4">
+                        <div class="card border-0 shadow-sm h-100">
+                            <div class="card-header bg-white border-0">
+                                <h6 class="mb-0 fw-bold"><i class="bi bi-bar-chart me-2"></i>Citas por Estado</h6>
+                            </div>
+                            <div class="card-body p-3">
+                                <div class="d-flex justify-content-between align-items-center mb-2" v-for="item in appointmentsByStatus" :key="item.status">
+                                    <span class="small">{{ formatStatus(item.status) }}</span>
+                                    <span class="badge" :class="statusBadgeClass(item.status)">{{ item.total }}</span>
+                                </div>
+                                <p v-if="appointmentsByStatus.length === 0" class="text-muted small mb-0">Sin datos</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="col-12 col-md-4">
+                        <div class="card border-0 shadow-sm h-100">
+                            <div class="card-header bg-white border-0">
+                                <h6 class="mb-0 fw-bold"><i class="bi bi-trophy me-2"></i>Top Equipos</h6>
+                            </div>
+                            <div class="card-body p-3" style="max-height: 300px; overflow-y: auto;">
+                                <div class="mb-3 pb-2 border-bottom" v-for="team in topTeams.slice(0, 3)" :key="team.id">
+                                    <div class="d-flex justify-content-between mb-1">
+                                        <span class="fw-semibold small">{{ team.name }}</span>
+                                        <span class="badge bg-dark small">{{ team.totalAppointments }}</span>
+                                    </div>
+                                    <div class="d-flex gap-1">
+                                        <span class="badge bg-warning text-dark" style="font-size: 0.65rem;">{{ team.activeAppointments }}</span>
+                                        <span class="badge bg-success" style="font-size: 0.65rem;">{{ team.completedAppointments }}</span>
+                                        <span class="badge bg-secondary" style="font-size: 0.65rem;">{{ team.cancelledAppointments }}</span>
+                                    </div>
+                                </div>
+                                <p v-if="topTeams.length === 0" class="text-muted small mb-0">Sin equipos</p>
+                            </div>
+                        </div>
+                    </div>
                 </div>
+            </div>
+
+            <!-- Tab: Citas -->
+            <div v-show="activeTab === 'citas'">
+                <div class="card border-0 shadow-sm mb-3">
+                    <div class="card-header bg-white border-0 d-flex justify-content-between align-items-center">
+                        <h6 class="mb-0 fw-bold"><i class="bi bi-exclamation-circle me-2"></i>Requieren Gestión</h6>
+                        <span class="badge bg-warning">{{ adminQueueTotal }}</span>
+                    </div>
                 <div class="table-responsive">
                     <table class="table align-middle mb-0">
                         <thead>
@@ -196,12 +251,12 @@
 
             <div class="card border-0 shadow-sm mt-3">
                 <div class="card-header bg-white border-0 d-flex justify-content-between align-items-center">
-                    <h6 class="mb-0 fw-bold">Citas Normales (Seguimiento)</h6>
-                    <small class="text-muted">{{ normalQueueTotal }} total</small>
+                    <h6 class="mb-0 fw-bold"><i class="bi bi-list-check me-2"></i>Seguimiento General</h6>
+                    <span class="badge bg-info">{{ normalQueueTotal }}</span>
                 </div>
                 <div class="table-responsive">
-                    <table class="table align-middle mb-0">
-                        <thead>
+                    <table class="table align-middle mb-0 table-sm">
+                        <thead class="table-light">
                             <tr>
                                 <th>Cliente</th>
                                 <th>Tipo</th>
@@ -212,14 +267,14 @@
                         </thead>
                         <tbody>
                             <tr v-for="apt in normalQueue" :key="`normal-${apt.id}`">
-                                <td>{{ apt.clientName }}</td>
-                                <td class="text-capitalize">{{ apt.appointment_type }}</td>
+                                <td class="small">{{ apt.clientName }}</td>
+                                <td class="text-capitalize small">{{ apt.appointment_type }}</td>
                                 <td><span class="badge" :class="statusBadgeClass(apt.status)">{{ formatStatus(apt.status) }}</span></td>
-                                <td>{{ formatDate(apt.scheduled_date) }}</td>
-                                <td>{{ apt.teamName || 'Sin equipo' }}</td>
+                                <td class="small">{{ formatDate(apt.scheduled_date) }}</td>
+                                <td class="small">{{ apt.teamName || 'Sin equipo' }}</td>
                             </tr>
                             <tr v-if="normalQueue.length === 0">
-                                <td colspan="5" class="text-center text-muted py-4">No hay citas normales</td>
+                                <td colspan="5" class="text-center text-muted py-4">No hay citas</td>
                             </tr>
                         </tbody>
                     </table>
@@ -241,11 +296,14 @@
                     </nav>
                 </div>
             </div>
+            </div>
 
-            <div class="card border-0 shadow-sm mt-3">
+            <!-- Tab: Equipos -->
+            <div v-show="activeTab === 'equipos'">
+            <div class="card border-0 shadow-sm">
                 <div class="card-header bg-white border-0">
                     <div class="d-flex flex-wrap justify-content-between align-items-center gap-2">
-                        <h6 class="mb-0 fw-bold">Gestión de Equipos</h6>
+                        <h6 class="mb-0 fw-bold"><i class="bi bi-diagram-3 me-2"></i>Gestión de Equipos</h6>
                         <button class="btn btn-sm btn-success" @click="openCreateTeam">
                             <i class="bi bi-plus-circle me-1"></i>Crear Equipo
                         </button>
@@ -290,11 +348,14 @@
                     </table>
                 </div>
             </div>
+            </div>
 
-            <div class="card border-0 shadow-sm mt-3">
+            <!-- Tab: Usuarios -->
+            <div v-show="activeTab === 'usuarios'">
+            <div class="card border-0 shadow-sm">
                 <div class="card-header bg-white border-0">
                     <div class="d-flex flex-wrap justify-content-between align-items-center gap-2">
-                        <h6 class="mb-0 fw-bold">Usuarios y Asignacion de Roles</h6>
+                        <h6 class="mb-0 fw-bold"><i class="bi bi-person-gear me-2"></i>Usuarios y Roles</h6>
                         <div class="d-flex flex-wrap gap-2">
                             <input
                                 v-model="userSearch"
@@ -308,13 +369,13 @@
                                 <option :value="null">Todos los roles</option>
                                 <option v-for="r in roles" :key="r.id" :value="r.id">{{ r.name }}</option>
                             </select>
-                            <button class="btn btn-sm btn-outline-primary" @click="loadUsers(1)">Filtrar</button>
+                            <button class="btn btn-sm btn-outline-primary" @click="loadUsers(1)"><i class="bi bi-search me-1"></i>Filtrar</button>
                         </div>
                     </div>
                 </div>
                 <div class="table-responsive">
-                    <table class="table align-middle mb-0">
-                        <thead>
+                    <table class="table align-middle mb-0 table-sm">
+                        <thead class="table-light">
                             <tr>
                                 <th>Usuario</th>
                                 <th>Email</th>
@@ -326,39 +387,44 @@
                         </thead>
                         <tbody>
                             <tr v-for="u in users" :key="u.id">
-                                <td>{{ u.name }}</td>
-                                <td>{{ u.email }}</td>
-                                <td>{{ getUserTeamDisplay(u) }}</td>
-                                <td><span class="badge text-bg-secondary">{{ u.role?.name || '-' }}</span></td>
-                                <td style="min-width: 220px;">
+                                <td class="small">{{ u.name }}</td>
+                                <td class="small">{{ u.email }}</td>
+                                <td class="small">{{ getUserTeamDisplay(u) }}</td>
+                                <td><span class="badge text-bg-secondary small">{{ u.role?.name || '-' }}</span></td>
+                                <td style="min-width: 200px;">
                                     <select class="form-select form-select-sm" v-model.number="selectedRoles[u.id]">
                                         <option :value="null" disabled>Seleccionar rol...</option>
                                         <option v-for="r in roles" :key="r.id" :value="r.id">{{ r.name }}</option>
                                     </select>
                                 </td>
                                 <td>
-                                    <button
-                                        class="btn btn-sm btn-outline-secondary me-2"
-                                        @click="openEditUser(u)"
-                                    >
-                                        Editar
-                                    </button>
-                                    <button
-                                        class="btn btn-sm btn-primary"
-                                        :disabled="!canUpdateRole(u) || savingRoles[u.id]"
-                                        @click="updateUserRole(u)"
-                                    >
-                                        <span v-if="savingRoles[u.id]" class="spinner-border spinner-border-sm me-1"></span>
-                                        {{ isSelf(u) ? 'No permitido' : 'Guardar rol' }}
-                                    </button>
-                                    <button
-                                        class="btn btn-sm btn-outline-danger ms-2"
-                                        :disabled="isSelf(u) || deletingUsers[u.id]"
-                                        @click="deleteUser(u)"
-                                    >
-                                        <span v-if="deletingUsers[u.id]" class="spinner-border spinner-border-sm me-1"></span>
-                                        Eliminar
-                                    </button>
+                                    <div class="btn-group btn-group-sm">
+                                        <button
+                                            class="btn btn-outline-secondary"
+                                            @click="openEditUser(u)"
+                                            title="Editar"
+                                        >
+                                            <i class="bi bi-pencil"></i>
+                                        </button>
+                                        <button
+                                            class="btn btn-primary"
+                                            :disabled="!canUpdateRole(u) || savingRoles[u.id]"
+                                            @click="updateUserRole(u)"
+                                            title="Guardar rol"
+                                        >
+                                            <span v-if="savingRoles[u.id]" class="spinner-border spinner-border-sm"></span>
+                                            <i v-else class="bi bi-check"></i>
+                                        </button>
+                                        <button
+                                            class="btn btn-outline-danger"
+                                            :disabled="isSelf(u) || deletingUsers[u.id]"
+                                            @click="deleteUser(u)"
+                                            title="Eliminar"
+                                        >
+                                            <span v-if="deletingUsers[u.id]" class="spinner-border spinner-border-sm"></span>
+                                            <i v-else class="bi bi-trash"></i>
+                                        </button>
+                                    </div>
                                 </td>
                             </tr>
                             <tr v-if="users.length === 0">
@@ -373,14 +439,16 @@
                     </small>
                     <div class="d-flex gap-2">
                         <button class="btn btn-sm btn-outline-secondary" :disabled="usersPagination.currentPage <= 1 || loadingUsers" @click="loadUsers(usersPagination.currentPage - 1)">
-                            Anterior
+                            <i class="bi bi-chevron-left"></i> Anterior
                         </button>
                         <button class="btn btn-sm btn-outline-secondary" :disabled="usersPagination.currentPage >= usersPagination.lastPage || loadingUsers" @click="loadUsers(usersPagination.currentPage + 1)">
-                            Siguiente
+                            Siguiente <i class="bi bi-chevron-right"></i>
                         </button>
                     </div>
                 </div>
             </div>
+            </div>
+
         </main>
 
         <NotificationPanel
@@ -691,6 +759,9 @@ const approvingQuotations = ref({});
 const adminQueuePage = ref(1);
 const normalQueuePage = ref(1);
 const itemsPerPage = 3;
+
+// Tab activo
+const activeTab = ref('resumen'); // 'resumen', 'citas', 'equipos', 'usuarios'
 
 // Price modal refs
 const showPriceModal = ref(false);
@@ -1377,6 +1448,12 @@ onMounted(() => {
 </script>
 
 <style scoped>
+.dashboard-container {
+    min-height: 100vh;
+    background: linear-gradient(135deg, #0d6efd 0%, #0a58ca 100%);
+    background-attachment: fixed;
+}
+
 .card {
     border-radius: 12px;
 }

@@ -1,19 +1,15 @@
 <template>
-    <AppLayout brand-href="/tecnico/dashboard" brand-label="Panel Tecnico Lider" brand-icon="bi bi-tools">
+    <AppLayout brand-href="/tecnico/dashboard" brand-label="Panel Tecnico Lider" brand-icon="bi bi-tools" page-class="dashboard-container">
         <template #nav-actions>
             <NotificationBell :count="unreadNotifications" @click="toggleNotifications" />
         </template>
 
         <main class="container-fluid px-3 px-md-4 py-4">
-            <div class="d-flex justify-content-between align-items-start mb-3 flex-wrap gap-2">
+            <div class="welcome-section mb-4">
                 <div>
-                    <h3 class="mb-1">Panel del Tecnico Lider</h3>
-                    <p class="text-muted mb-0">Gestión de citas, cotizaciones y equipo</p>
+                    <h3 class="mb-1 text-white fw-bold">Panel del Técnico Líder</h3>
+                    <p class="text-white opacity-75 mb-0">Gestión de citas, cotizaciones y equipo</p>
                 </div>
-                <button class="btn btn-primary" @click="loadData" :disabled="loading">
-                    <span v-if="loading" class="spinner-border spinner-border-sm me-2"></span>
-                    {{ loading ? 'Actualizando...' : 'Actualizar datos' }}
-                </button>
             </div>
 
             <div v-if="error" class="alert alert-danger mb-3">{{ error }}</div>
@@ -21,34 +17,62 @@
             <!-- ESTADÍSTICAS -->
             <div class="row g-3 mb-4">
                 <div class="col-12 col-sm-6 col-xl-3">
-                    <div class="card border-0 shadow-sm h-100">
-                        <div class="card-body">
-                            <small class="text-muted">Citas Totales</small>
-                            <h4 class="mb-0 fw-bold text-primary">{{ stats.totalAppointments }}</h4>
+                    <div class="card border-0 shadow-sm h-100 stats-card stats-card-primary">
+                        <div class="card-body p-3">
+                            <div class="d-flex align-items-center justify-content-between">
+                                <div>
+                                    <div class="text-muted small mb-1">Citas Totales</div>
+                                    <h2 class="mb-0 fw-bold" style="color: #0d6efd;">{{ stats.totalAppointments }}</h2>
+                                </div>
+                                <div class="stats-icon stats-icon-primary">
+                                    <i class="bi bi-calendar-check"></i>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
                 <div class="col-12 col-sm-6 col-xl-3">
-                    <div class="card border-0 shadow-sm h-100">
-                        <div class="card-body">
-                            <small class="text-muted">Pendientes de Cotizar</small>
-                            <h4 class="mb-0 fw-bold text-warning">{{ stats.pendingQuotation }}</h4>
+                    <div class="card border-0 shadow-sm h-100 stats-card stats-card-warning">
+                        <div class="card-body p-3">
+                            <div class="d-flex align-items-center justify-content-between">
+                                <div>
+                                    <div class="text-muted small mb-1">Pendientes de Cotizar</div>
+                                    <h2 class="mb-0 fw-bold" style="color: #ffc107;">{{ stats.pendingQuotation }}</h2>
+                                </div>
+                                <div class="stats-icon stats-icon-warning-yellow">
+                                    <i class="bi bi-file-earmark-text"></i>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
                 <div class="col-12 col-sm-6 col-xl-3">
-                    <div class="card border-0 shadow-sm h-100">
-                        <div class="card-body">
-                            <small class="text-muted">Programadas para Ejecutar</small>
-                            <h4 class="mb-0 fw-bold text-info">{{ stats.scheduled }}</h4>
+                    <div class="card border-0 shadow-sm h-100 stats-card stats-card-info">
+                        <div class="card-body p-3">
+                            <div class="d-flex align-items-center justify-content-between">
+                                <div>
+                                    <div class="text-muted small mb-1">Para Ejecutar</div>
+                                    <h2 class="mb-0 fw-bold" style="color: #0dcaf0;">{{ stats.scheduled }}</h2>
+                                </div>
+                                <div class="stats-icon stats-icon-info">
+                                    <i class="bi bi-clipboard-check"></i>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
                 <div class="col-12 col-sm-6 col-xl-3">
-                    <div class="card border-0 shadow-sm h-100">
-                        <div class="card-body">
-                            <small class="text-muted">Miembros del Equipo</small>
-                            <h4 class="mb-0 fw-bold text-success">{{ stats.teamMembers }}</h4>
+                    <div class="card border-0 shadow-sm h-100 stats-card stats-card-success">
+                        <div class="card-body p-3">
+                            <div class="d-flex align-items-center justify-content-between">
+                                <div>
+                                    <div class="text-muted small mb-1">Miembros del Equipo</div>
+                                    <h2 class="mb-0 fw-bold" style="color: #198754;">{{ stats.teamMembers }}</h2>
+                                </div>
+                                <div class="stats-icon stats-icon-success">
+                                    <i class="bi bi-people"></i>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -57,9 +81,11 @@
             <!-- EQUIPOS Y COTIZACIONES PENDIENTES -->
             <div class="row g-3 mb-3">
                 <div class="col-12 col-lg-4">
-                    <div class="card border-0 shadow-sm h-100">
-                        <div class="card-header bg-white border-0 pb-0">
-                            <h6 class="mb-0 fw-bold">Mis Equipos</h6>
+                    <div class="card border-0 shadow h-100">
+                        <div class="card-header bg-gradient-primary text-white border-0 py-3">
+                            <h6 class="mb-0 fw-semibold">
+                                <i class="bi bi-people me-2"></i>Mis Equipos
+                            </h6>
                         </div>
                         <div class="card-body">
                             <ul class="list-group list-group-flush">
@@ -79,9 +105,11 @@
                 </div>
 
                 <div class="col-12 col-lg-4">
-                    <div class="card border-0 shadow-sm h-100">
-                        <div class="card-header bg-white border-0 pb-0">
-                            <h6 class="mb-0 fw-bold">Cotizaciones Pendientes</h6>
+                    <div class="card border-0 shadow h-100">
+                        <div class="card-header bg-gradient-warning text-dark border-0 py-3">
+                            <h6 class="mb-0 fw-semibold">
+                                <i class="bi bi-file-earmark-text me-2"></i>Cotizaciones Pendientes
+                            </h6>
                         </div>
                         <div class="card-body">
                             <div v-if="pendingQuotations.length > 0" class="list-group list-group-flush">
@@ -103,9 +131,11 @@
                 </div>
 
                 <div class="col-12 col-lg-4">
-                    <div class="card border-0 shadow-sm h-100">
-                        <div class="card-header bg-white border-0 pb-0">
-                            <h6 class="mb-0 fw-bold">Estado de Citas</h6>
+                    <div class="card border-0 shadow h-100">
+                        <div class="card-header bg-gradient-success text-white border-0 py-3">
+                            <h6 class="mb-0 fw-semibold">
+                                <i class="bi bi-bar-chart me-2"></i>Estado de Citas
+                            </h6>
                         </div>
                         <div class="card-body">
                             <ul class="list-group list-group-flush">
@@ -121,11 +151,18 @@
             </div>
 
             <!-- CITAS DEL EQUIPO -->
-            <div class="card border-0 shadow-sm">
-                <div class="card-header bg-white border-0">
+            <div class="card border-0 shadow">
+                <div class="card-header bg-gradient-primary text-white border-0">
                     <div class="d-flex flex-wrap justify-content-between align-items-center gap-2">
-                        <h6 class="mb-0 fw-bold">Citas de Mis Equipos</h6>
+                        <h6 class="mb-0 fw-semibold">
+                            <i class="bi bi-calendar3 me-2"></i>Citas de Mis Equipos
+                        </h6>
                         <div class="d-flex flex-wrap gap-2">
+                            <button class="btn btn-light btn-sm" @click="loadData" :disabled="loading">
+                                <span v-if="loading" class="spinner-border spinner-border-sm me-1"></span>
+                                <i v-else class="bi bi-arrow-clockwise me-1"></i>
+                                {{ loading ? 'Actualizando...' : 'Actualizar' }}
+                            </button>
                             <select class="form-select form-select-sm" style="min-width: 180px;" v-model="statusFilter">
                                 <option value="">Citas Activas</option>
                                 <option value="solicitada">Solicitada</option>
@@ -142,7 +179,7 @@
                     </div>
                 </div>
                 <div class="table-responsive">
-                    <table class="table align-middle mb-0">
+                    <table class="table table-hover align-middle mb-0">
                         <thead>
                             <tr>
                                 <th>Cliente</th>
@@ -218,12 +255,14 @@
             </div>
 
             <!-- MIEMBROS DEL EQUIPO -->
-            <div class="card border-0 shadow-sm mt-3">
-                <div class="card-header bg-white border-0">
-                    <h6 class="mb-0 fw-bold">Miembros de Mis Equipos</h6>
+            <div class="card border-0 shadow mt-3">
+                <div class="card-header bg-gradient-success text-white border-0">
+                    <h6 class="mb-0 fw-semibold">
+                        <i class="bi bi-people me-2"></i>Miembros de Mis Equipos
+                    </h6>
                 </div>
                 <div class="table-responsive">
-                    <table class="table align-middle mb-0">
+                    <table class="table table-hover align-middle mb-0">
                         <thead>
                             <tr>
                                 <th>Nombre</th>
@@ -693,6 +732,118 @@ onUnmounted(() => {
 </script>
 
 <style scoped>
+.dashboard-container {
+    min-height: 100vh;
+    background: linear-gradient(135deg, #0d6efd 0%, #0a58ca 100%);
+    background-attachment: fixed;
+}
+
+/* Welcome Section */
+.welcome-section h3 {
+    font-size: 1.75rem;
+}
+
+.welcome-section p {
+    font-size: 1rem;
+}
+
+/* Stats Cards - Professional Style */
+.stats-card {
+    transition: all 0.3s ease;
+    position: relative;
+    overflow: hidden;
+}
+
+.stats-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(135deg, rgba(255,255,255,0) 0%, rgba(255,255,255,0.1) 100%);
+    opacity: 0;
+    transition: opacity 0.3s ease;
+}
+
+.stats-card:hover::before {
+    opacity: 1;
+}
+
+.stats-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 0.75rem 1.5rem rgba(0, 0, 0, 0.15) !important;
+}
+
+.stats-card-primary {
+    background: linear-gradient(135deg, #ffffff 0%, #f0f5ff 100%);
+    border-left: 4px solid #0d6efd;
+}
+
+.stats-card-success {
+    background: linear-gradient(135deg, #ffffff 0%, #f0fdf4 100%);
+    border-left: 4px solid #198754;
+}
+
+.stats-card-warning {
+    background: linear-gradient(135deg, #ffffff 0%, #fffbf0 100%);
+    border-left: 4px solid #ffc107;
+}
+
+.stats-card-info {
+    background: linear-gradient(135deg, #ffffff 0%, #f0fcff 100%);
+    border-left: 4px solid #0dcaf0;
+}
+
+.stats-icon {
+    width: 56px;
+    height: 56px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.75rem;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    transition: transform 0.3s ease;
+}
+
+.stats-card:hover .stats-icon {
+    transform: scale(1.1) rotate(5deg);
+}
+
+.stats-icon-primary {
+    background: linear-gradient(135deg, #0d6efd 0%, #0a58ca 100%);
+    color: white;
+}
+
+.stats-icon-success {
+    background: linear-gradient(135deg, #198754 0%, #146c43 100%);
+    color: white;
+}
+
+.stats-icon-warning-yellow {
+    background: linear-gradient(135deg, #ffc107 0%, #ffb300 100%);
+    color: white;
+}
+
+.stats-icon-info {
+    background: linear-gradient(135deg, #0dcaf0 0%, #0aa2c0 100%);
+    color: white;
+}
+
+/* Card Headers with Gradients */
+.bg-gradient-primary {
+    background: linear-gradient(135deg, #0d6efd 0%, #0a58ca 100%);
+}
+
+.bg-gradient-success {
+    background: linear-gradient(135deg, #198754 0%, #146c43 100%);
+}
+
+.bg-gradient-warning {
+    background: linear-gradient(135deg, #ffc107 0%, #ffb300 100%);
+}
+
 .btn-group-sm .btn {
     padding: 0.25rem 0.5rem;
     font-size: 0.875rem;

@@ -17,205 +17,239 @@
             <!-- Welcome Section -->
             <div class="welcome-section">
                 <div class="welcome-text">
-                    <h1>Hola, {{ userProfile.name || 'Usuario' }} 👋</h1>
-                    <p>Bienvenido a tu panel de control</p>
+                    <h1 class="fw-bold mb-0">Hola, {{ userProfile.name || 'Usuario' }} 👋</h1>
+                    <p class="text-muted mb-0">Gestiona tus citas de telecomunicaciones</p>
                 </div>
-                <button class="btn-new-appointment" @click="goToAppointments">
-                    <i class="bi bi-plus-circle-fill me-2"></i>
-                    Nueva Cita
-                </button>
             </div>
 
             <!-- Stats Cards -->
-            <div class="stats-grid">
-                <div class="stat-card">
-                    <div class="stat-icon blue">
-                        <i class="bi bi-calendar-check-fill"></i>
-                    </div>
-                    <div class="stat-info">
-                        <span class="stat-label">Próximas Citas</span>
-                        <span class="stat-value">{{ activeAppointments.length }}</span>
-                    </div>
-                </div>
-
-                <div class="stat-card">
-                    <div class="stat-icon green">
-                        <i class="bi bi-check-circle-fill"></i>
-                    </div>
-                    <div class="stat-info">
-                        <span class="stat-label">Completadas</span>
-                        <span class="stat-value">{{ completedAppointments.length }}</span>
+            <div class="row g-3 mb-4">
+                <div class="col-md-4">
+                    <div class="card border-0 shadow-sm h-100 stats-card stats-card-primary">
+                        <div class="card-body p-3">
+                            <div class="d-flex align-items-center justify-content-between">
+                                <div>
+                                    <div class="text-muted small mb-1">Citas Activas</div>
+                                    <h2 class="mb-0 fw-bold" style="color: #0d6efd;">{{ activeAppointments.length }}</h2>
+                                </div>
+                                <div class="stats-icon stats-icon-primary">
+                                    <i class="bi bi-calendar-check"></i>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
-
-                <div class="stat-card">
-                    <div class="stat-icon orange">
-                        <i class="bi bi-clock-fill"></i>
+                <div class="col-md-4">
+                    <div class="card border-0 shadow-sm h-100 stats-card stats-card-success">
+                        <div class="card-body p-3">
+                            <div class="d-flex align-items-center justify-content-between">
+                                <div>
+                                    <div class="text-muted small mb-1">Completadas</div>
+                                    <h2 class="mb-0 fw-bold" style="color: #198754;">{{ completedAppointments.length }}</h2>
+                                </div>
+                                <div class="stats-icon stats-icon-success">
+                                    <i class="bi bi-check-circle"></i>
+                                </div>
+                            </div>
+                        </div>
                     </div>
-                    <div class="stat-info">
-                        <span class="stat-label">Canceladas</span>
-                        <span class="stat-value">{{ cancelledAppointments.length }}</span>
+                </div>
+                <div class="col-md-4">
+                    <div class="card border-0 shadow-sm h-100 stats-card stats-card-warning">
+                        <div class="card-body p-3">
+                            <div class="d-flex align-items-center justify-content-between">
+                                <div>
+                                    <div class="text-muted small mb-1">Canceladas</div>
+                                    <h2 class="mb-0 fw-bold" style="color: #6c757d;">{{ cancelledAppointments.length }}</h2>
+                                </div>
+                                <div class="stats-icon stats-icon-warning">
+                                    <i class="bi bi-x-circle"></i>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
 
-            <!-- Main Grid -->
-            <div class="content-grid">
+            <!-- Main Content Grid -->
+            <div class="row g-3">
                 <!-- Appointments Section -->
-                <div class="appointments-section">
-                    <div class="section-header">
-                        <h2>Mis Citas</h2>
-                    </div>
-
-                    <!-- Filtros -->
-                    <div class="mb-3">
-                        <div class="btn-group" role="group">
-                            <button 
-                                type="button" 
-                                class="btn btn-sm"
-                                :class="appointmentFilter === 'activas' ? 'btn-primary' : 'btn-outline-primary'"
-                                @click="appointmentFilter = 'activas'"
-                            >
-                                Activas ({{ activeAppointments.length }})
-                            </button>
-                            <button 
-                                type="button" 
-                                class="btn btn-sm"
-                                :class="appointmentFilter === 'completadas' ? 'btn-success' : 'btn-outline-success'"
-                                @click="appointmentFilter = 'completadas'"
-                            >
-                                Completadas ({{ completedAppointments.length }})
-                            </button>
-                            <button 
-                                type="button" 
-                                class="btn btn-sm"
-                                :class="appointmentFilter === 'canceladas' ? 'btn-secondary' : 'btn-outline-secondary'"
-                                @click="appointmentFilter = 'canceladas'"
-                            >
-                                Canceladas ({{ cancelledAppointments.length }})
-                            </button>
+                <div class="col-lg-8">
+                    <div class="card border-0 shadow h-100">
+                        <div class="card-header bg-gradient-primary text-white border-0 py-3">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <h5 class="mb-0 fw-semibold">
+                                    <i class="bi bi-calendar3 me-2"></i>Mis Citas
+                                </h5>
+                                <button class="btn btn-light btn-sm" @click="goToAppointments">
+                                    <i class="bi bi-plus-circle me-1"></i>Nueva Cita
+                                </button>
+                            </div>
                         </div>
-                    </div>
-
-                    <div v-if="filteredAppointments.length === 0" class="empty-state">
-                        <i class="bi bi-calendar-x"></i>
-                        <h3>No hay citas {{ appointmentFilter === 'activas' ? 'activas' : appointmentFilter }}</h3>
-                        <p v-if="appointmentFilter === 'activas'">Agenda tu primera cita para comenzar</p>
-                    </div>
-
-                    <div v-else class="appointments-list">
-                        <div v-for="apt in filteredAppointments" :key="apt.id" class="appointment-card">
-                            <div class="apt-status" :class="statusClass(apt.status)"></div>
-                            <div class="apt-content">
-                                <div class="apt-header">
-                                    <h3>{{ apt.appointment_type }}</h3>
-                                    <span class="status-badge" :class="statusClass(apt.status)">
-                                        {{ apt.status }}
-                                    </span>
-                                </div>
-                                <div class="apt-details">
-                                    <div class="apt-detail">
-                                        <i class="bi bi-calendar3"></i>
-                                        <span>{{ formatDate(apt.scheduled_date) }}</span>
-                                    </div>
-                                    <div class="apt-detail">
-                                        <i class="bi bi-geo-alt-fill"></i>
-                                        <span>{{ apt.address }}</span>
-                                    </div>
-                                </div>
-                                <div class="apt-actions mt-2" v-if="!['cancelada', 'ejecutada'].includes(apt.status)">
-                                    <button
-                                        class="btn btn-sm btn-outline-danger"
-                                        :disabled="cancellingAppointments[apt.id]"
-                                        @click="showCancelConfirm(apt)"
-                                        title="Cancelar esta cita"
+                        <div class="card-body p-3">
+                            <!-- Filters -->
+                            <div class="mb-3">
+                                <div class="btn-group btn-group-sm" role="group">
+                                    <button 
+                                        type="button" 
+                                        class="btn"
+                                        :class="appointmentFilter === 'activas' ? 'btn-primary' : 'btn-outline-primary'"
+                                        @click="appointmentFilter = 'activas'"
                                     >
-                                        <span v-if="cancellingAppointments[apt.id]" class="spinner-border spinner-border-sm me-1"></span>
-                                        <i v-else class="bi bi-x-circle me-1"></i>
-                                        Cancelar
+                                        Activas ({{ activeAppointments.length }})
+                                    </button>
+                                    <button 
+                                        type="button" 
+                                        class="btn"
+                                        :class="appointmentFilter === 'completadas' ? 'btn-success' : 'btn-outline-success'"
+                                        @click="appointmentFilter = 'completadas'"
+                                    >
+                                        Completadas ({{ completedAppointments.length }})
+                                    </button>
+                                    <button 
+                                        type="button" 
+                                        class="btn"
+                                        :class="appointmentFilter === 'canceladas' ? 'btn-outline-secondary' : 'btn-outline-secondary'"
+                                        @click="appointmentFilter = 'canceladas'"
+                                    >
+                                        Canceladas ({{ cancelledAppointments.length }})
                                     </button>
                                 </div>
                             </div>
-                        </div>
-                    </div>
+                            <div v-if="filteredAppointments.length === 0" class="text-center py-5 text-muted">
+                                <i class="bi bi-calendar-x" style="font-size: 3rem; opacity: 0.2;"></i>
+                                <h6 class="mt-3 mb-1">No hay citas {{ appointmentFilter === 'activas' ? 'activas' : appointmentFilter }}</h6>
+                                <p v-if="appointmentFilter === 'activas'" class="small mb-0">Agenda tu primera cita para comenzar</p>
+                            </div>
 
-                    <!-- Paginación -->
-                    <div v-if="totalPages > 1" class="mt-3">
-                        <nav>
-                            <ul class="pagination pagination-sm justify-content-center mb-0">
-                                <li class="page-item" :class="{ disabled: currentPage === 1 }">
-                                    <button class="page-link" @click="currentPage = Math.max(1, currentPage - 1)">Anterior</button>
-                                </li>
-                                <li v-for="page in totalPages" :key="page" class="page-item" :class="{ active: currentPage === page }">
-                                    <button class="page-link" @click="currentPage = page">{{ page }}</button>
-                                </li>
-                                <li class="page-item" :class="{ disabled: currentPage === totalPages }">
-                                    <button class="page-link" @click="currentPage = Math.min(totalPages, currentPage + 1)">Siguiente</button>
-                                </li>
-                            </ul>
-                        </nav>
+                            <div v-else class="appointments-list">
+                                <div v-for="apt in filteredAppointments" :key="apt.id" class="appointment-item">
+                                    <div class="d-flex justify-content-between align-items-start mb-2">
+                                        <h6 class="mb-0 fw-semibold text-capitalize">{{ apt.appointment_type }}</h6>
+                                        <span class="badge rounded-pill" :class="'bg-' + statusColorClass(apt.status)">
+                                            {{ formatStatus(apt.status) }}
+                                        </span>
+                                    </div>
+                                    <div class="appointment-details">
+                                        <div class="detail-item">
+                                            <i class="bi bi-calendar3 text-muted"></i>
+                                            <span>{{ formatDate(apt.scheduled_date) }}</span>
+                                        </div>
+                                        <div class="detail-item">
+                                            <i class="bi bi-geo-alt text-muted"></i>
+                                            <span>{{ apt.address }}</span>
+                                        </div>
+                                        <div v-if="apt.team" class="detail-item">
+                                            <i class="bi bi-people text-muted"></i>
+                                            <span>{{ apt.team.name }}</span>
+                                        </div>
+                                    </div>
+                                    <div class="mt-2" v-if="!['cancelada', 'ejecutada'].includes(apt.status)">
+                                        <button
+                                            class="btn btn-sm btn-outline-danger"
+                                            :disabled="cancellingAppointments[apt.id]"
+                                            @click="showCancelConfirm(apt)"
+                                        >
+                                            <span v-if="cancellingAppointments[apt.id]" class="spinner-border spinner-border-sm me-1"></span>
+                                            <i v-else class="bi bi-x-circle me-1"></i>
+                                            Cancelar
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Paginación -->
+                            <div v-if="totalPages > 1" class="mt-3">
+                                <nav>
+                                    <ul class="pagination pagination-sm justify-content-center mb-0">
+                                        <li class="page-item" :class="{ disabled: currentPage === 1 }">
+                                            <button class="page-link" @click="currentPage = Math.max(1, currentPage - 1)">Anterior</button>
+                                        </li>
+                                        <li v-for="page in totalPages" :key="page" class="page-item" :class="{ active: currentPage === page }">
+                                            <button class="page-link" @click="currentPage = page">{{ page }}</button>
+                                        </li>
+                                        <li class="page-item" :class="{ disabled: currentPage === totalPages }">
+                                            <button class="page-link" @click="currentPage = Math.min(totalPages, currentPage + 1)">Siguiente</button>
+                                        </li>
+                                    </ul>
+                                </nav>
+                            </div>
+                        </div>
                     </div>
                 </div>
 
-                <!-- Profile & Quotations Sidebar -->
-                <div class="sidebar-section">
-                    <!-- Profile Card -->
-                    <div class="profile-card">
-                        <div class="profile-header">
-                            <div class="profile-avatar" @click="$refs.photoInput.click()">
-                                <img v-if="userProfile.profile_photo_url" :src="userProfile.profile_photo_url" :alt="userProfile.name">
-                                <i v-else class="bi bi-person-fill"></i>
-                                <div class="avatar-overlay">
-                                    <i class="bi bi-camera-fill"></i>
-                                </div>
-                            </div>
-                            <input type="file" ref="photoInput" @change="uploadProfilePhoto" accept="image/*" style="display: none;">
-                            <h3>{{ userProfile.name || 'Usuario' }}</h3>
-                            <p><i class="bi bi-shield-check-fill me-1"></i>Verificado</p>
+                <!-- Sidebar -->
+                <div class="col-lg-4">
+                    <!-- Quotations Card -->
+                    <div class="card border-0 shadow mb-3">
+                        <div class="card-header bg-gradient-warning text-dark border-0 py-3">
+                            <h6 class="mb-0 fw-semibold">
+                                <i class="bi bi-file-earmark-text me-2"></i>Cotizaciones
+                                <span v-if="quotationsPendingApproval.length > 0" class="badge bg-white text-dark ms-2">{{ quotationsPendingApproval.length }}</span>
+                            </h6>
                         </div>
-                        <div class="profile-info">
-                            <div class="info-item">
-                                <i class="bi bi-envelope-fill"></i>
-                                <div>
-                                    <span class="label">Email</span>
-                                    <span class="value">{{ userProfile.email || '-' }}</span>
-                                </div>
+                        <div class="card-body p-3">
+                            <div v-if="quotationsPendingApproval.length === 0" class="text-center py-4 text-muted">
+                                <i class="bi bi-file-earmark-text" style="font-size: 2.5rem; opacity: 0.2;"></i>
+                                <p class="mb-0 mt-2 small">Sin cotizaciones pendientes</p>
                             </div>
-                            <div class="info-item">
-                                <i class="bi bi-telephone-fill"></i>
-                                <div>
-                                    <span class="label">Teléfono</span>
-                                    <span class="value">{{ userProfile.phone || '-' }}</span>
-                                </div>
-                            </div>
-                            <div class="info-item">
-                                <i class="bi bi-calendar-event-fill"></i>
-                                <div>
-                                    <span class="label">Miembro desde</span>
-                                    <span class="value">Marzo 2026</span>
+                            <div v-else class="d-flex flex-column gap-2">
+                                <div v-for="apt in quotationsPendingApproval" :key="`q-${apt.id}`" class="quotation-item" @click="openQuotationModal(apt)">
+                                    <div class="d-flex justify-content-between align-items-center mb-2">
+                                        <strong class="small">{{ apt.team?.name || 'Equipo' }}</strong>
+                                        <span class="badge bg-info">Cotizada</span>
+                                    </div>
+                                    <div class="small text-muted">
+                                        <i class="bi bi-calendar3 me-1"></i>{{ formatDate(apt.scheduled_date) }}
+                                    </div>
                                 </div>
                             </div>
                         </div>
                     </div>
 
-                    <!-- Quotations Card -->
-                    <div class="quotations-card">
-                        <h3>Cotizaciones</h3>
-                        <div v-if="quotationsPendingApproval.length === 0" class="empty-state small">
-                            <i class="bi bi-file-earmark-text"></i>
-                            <p>Sin cotizaciones por aprobar</p>
+                    <!-- Profile Card -->
+                    <div class="card border-0 shadow">
+                        <div class="card-header bg-gradient-success text-white border-0 py-3">
+                            <h6 class="mb-0 fw-semibold">
+                                <i class="bi bi-person-circle me-2"></i>Mi Perfil
+                            </h6>
                         </div>
-                        <div v-else class="d-flex flex-column gap-2 mt-2">
-                            <div v-for="apt in quotationsPendingApproval" :key="`q-${apt.id}`" class="border rounded p-2 bg-white cursor-pointer hover-highlight" @click="openQuotationModal(apt)" style="cursor: pointer; transition: all 0.2s;">
-                                <div class="d-flex justify-content-between align-items-center mb-1">
-                                    <strong class="small">{{ apt.team?.name || 'Equipo' }}</strong>
-                                    <span class="badge bg-info text-dark">Cotizada</span>
+                        <div class="card-body p-3">
+                            <div class="text-center mb-3">
+                                <div class="profile-photo-wrapper" @click="$refs.photoInput.click()">
+                                    <div class="profile-photo">
+                                        <img v-if="userProfile.profile_photo_url" :src="userProfile.profile_photo_url" :alt="userProfile.name">
+                                        <i v-else class="bi bi-person-fill"></i>
+                                    </div>
+                                    <div class="profile-photo-edit">
+                                        <i class="bi bi-camera-fill"></i>
+                                    </div>
                                 </div>
-                                <div class="small text-muted mb-2">
-                                    Cita #{{ apt.id }} · {{ formatDate(apt.scheduled_date) }}
+                                <input type="file" ref="photoInput" @change="uploadProfilePhoto" accept="image/*" style="display: none;">
+                                <h6 class="mt-3 mb-0">{{ userProfile.name || 'Usuario' }}</h6>
+                                <small class="text-success"><i class="bi bi-shield-check-fill me-1"></i>Verificado</small>
+                            </div>
+                            <div class="profile-info">
+                                <div class="profile-info-item">
+                                    <i class="bi bi-envelope"></i>
+                                    <div>
+                                        <div class="label">Email</div>
+                                        <div class="value">{{ userProfile.email || '-' }}</div>
+                                    </div>
                                 </div>
-                                <div class="small text-primary" style="font-size: 0.8rem;">
-                                    <i class="bi bi-info-circle me-1"></i>Haz click para ver detalles y decidir
+                                <div class="profile-info-item">
+                                    <i class="bi bi-telephone"></i>
+                                    <div>
+                                        <div class="label">Teléfono</div>
+                                        <div class="value">{{ userProfile.phone || '-' }}</div>
+                                    </div>
+                                </div>
+                                <div class="profile-info-item">
+                                    <i class="bi bi-calendar-event"></i>
+                                    <div>
+                                        <div class="label">Miembro desde</div>
+                                        <div class="value">Marzo 2026</div>
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -552,16 +586,30 @@ const formatNotificationTime = (date) => {
     return d.toLocaleDateString('es-ES', { month: 'short', day: 'numeric' });
 };
 
-const statusClass = (status) => {
-    const statusMap = {
-        'solicitada': 'status-requested',
-        'pendiente_aprobacion_admin': 'status-requested',
-        'cotizada': 'status-quoted',
-        'confirmada': 'status-confirmed',
-        'ejecutada': 'status-completed',
-        'cancelada': 'status-cancelled'
+const statusColorClass = (status) => {
+    const colorMap = {
+        'solicitada': 'primary',
+        'pendiente_aprobacion_admin': 'primary',
+        'cotizada': 'info',
+        'para_ejecucion': 'success',
+        'confirmada': 'success',
+        'ejecutada': 'success',
+        'cancelada': 'secondary'
     };
-    return statusMap[status] || 'status-default';
+    return colorMap[status] || 'secondary';
+};
+
+const formatStatus = (status) => {
+    const statusMap = {
+        'solicitada': 'Solicitada',
+        'pendiente_aprobacion_admin': 'Pendiente',
+        'cotizada': 'Cotizada',
+        'para_ejecucion': 'Para Ejecución',
+        'confirmada': 'Confirmada',
+        'ejecutada': 'Completada',
+        'cancelada': 'Cancelada'
+    };
+    return statusMap[status] || status;
 };
 
 const formatCurrency = (price) => {
@@ -776,7 +824,7 @@ onMounted(() => {
     font-size: 0.9rem;
 }
 
-/* Contenido Principal */
+/* Main Content */
 .main-content {
     max-width: 1400px;
     margin: 0 auto;
@@ -785,498 +833,327 @@ onMounted(() => {
 
 /* Welcome Section */
 .welcome-section {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
     margin-bottom: 2rem;
-    flex-wrap: wrap;
-    gap: 1rem;
 }
 
 .welcome-text h1 {
     font-size: 2rem;
-    font-weight: 700;
     color: white;
-    margin: 0 0 0.25rem 0;
 }
 
 .welcome-text p {
-    color: rgba(255, 255, 255, 0.8);
-    margin: 0;
+    color: rgba(255, 255, 255, 0.9);
     font-size: 1rem;
 }
 
-.btn-new-appointment {
-    background: white;
-    color: #0d6efd;
-    border: none;
-    padding: 0.875rem 1.75rem;
-    border-radius: 12px;
-    font-weight: 600;
-    font-size: 1rem;
-    cursor: pointer;
-    transition: all 0.3s;
-    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
-    display: flex;
-    align-items: center;
+/* Stats Cards - Professional Style */
+.stats-card {
+    transition: all 0.3s ease;
+    position: relative;
+    overflow: hidden;
 }
 
-.btn-new-appointment:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.25);
+.stats-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(135deg, rgba(255,255,255,0) 0%, rgba(255,255,255,0.1) 100%);
+    opacity: 0;
+    transition: opacity 0.3s ease;
 }
 
-/* Stats Grid */
-.stats-grid {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 1.5rem;
-    margin-bottom: 2rem;
+.stats-card:hover::before {
+    opacity: 1;
 }
 
-.stat-card {
-    background: white;
-    padding: 1.5rem;
-    border-radius: 16px;
-    display: flex;
-    align-items: center;
-    gap: 1rem;
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
-    transition: all 0.3s;
-}
-
-.stat-card:hover {
+.stats-card:hover {
     transform: translateY(-4px);
-    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.15);
+    box-shadow: 0 0.75rem 1.5rem rgba(0, 0, 0, 0.15) !important;
 }
 
-.stat-icon {
-    width: 60px;
-    height: 60px;
-    border-radius: 14px;
+.stats-card-primary {
+    background: linear-gradient(135deg, #ffffff 0%, #f0f5ff 100%);
+    border-left: 4px solid #0d6efd;
+}
+
+.stats-card-success {
+    background: linear-gradient(135deg, #ffffff 0%, #f0fdf4 100%);
+    border-left: 4px solid #198754;
+}
+
+.stats-card-warning {
+    background: linear-gradient(135deg, #ffffff 0%, #fafafa 100%);
+    border-left: 4px solid #6c757d;
+}
+
+.stats-icon {
+    width: 56px;
+    height: 56px;
+    border-radius: 12px;
     display: flex;
     align-items: center;
     justify-content: center;
     font-size: 1.75rem;
-    color: white;
-    flex-shrink: 0;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    transition: transform 0.3s ease;
 }
 
-.stat-icon.blue {
+.stats-card:hover .stats-icon {
+    transform: scale(1.1) rotate(5deg);
+}
+
+.stats-icon-primary {
+    background: linear-gradient(135deg, #0d6efd 0%, #0a58ca 100%);
+    color: white;
+}
+
+.stats-icon-success {
+    background: linear-gradient(135deg, #198754 0%, #146c43 100%);
+    color: white;
+}
+
+.stats-icon-warning {
+    background: linear-gradient(135deg, #6c757d 0%, #5a6268 100%);
+    color: white;
+}
+
+/* Card Headers with Gradients */
+.bg-gradient-primary {
     background: linear-gradient(135deg, #0d6efd 0%, #0a58ca 100%);
 }
 
-.stat-icon.green {
-    background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
+.bg-gradient-success {
+    background: linear-gradient(135deg, #198754 0%, #146c43 100%);
 }
 
-.stat-icon.orange {
-    background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+.bg-gradient-warning {
+    background: linear-gradient(135deg, #ffc107 0%, #ffb300 100%);
 }
 
-.stat-icon.purple {
-    background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
-}
-
-.stat-info {
-    display: flex;
-    flex-direction: column;
-}
-
-.stat-label {
-    color: #6b7280;
-    font-size: 0.875rem;
-    font-weight: 500;
-    margin-bottom: 0.25rem;
-}
-
-.stat-value {
-    color: #1f2937;
-    font-size: 1.75rem;
-    font-weight: 700;
-}
-
-/* Content Grid */
-.content-grid {
-    display: grid;
-    grid-template-columns: 1fr 350px;
-    gap: 2rem;
-}
-
-/* Appointments Section */
-.appointments-section {
-    background: white;
-    border-radius: 16px;
-    padding: 1.5rem;
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
-}
-
-.section-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 1.5rem;
-}
-
-.section-header h2 {
-    font-size: 1.5rem;
-    font-weight: 700;
-    color: #1f2937;
-    margin: 0;
-}
-
-.badge-count {
-    background: linear-gradient(135deg, #0d6efd 0%, #0a58ca 100%);
-    color: white;
-    padding: 0.375rem 0.875rem;
-    border-radius: 20px;
-    font-weight: 600;
-    font-size: 0.875rem;
-}
-
+/* Appointments List */
 .appointments-list {
     display: flex;
     flex-direction: column;
-    gap: 1rem;
+    gap: 0.75rem;
 }
 
-.appointment-card {
-    display: flex;
-    gap: 1rem;
-    padding: 1.25rem;
-    background: #f9fafb;
-    border-radius: 12px;
-    transition: all 0.3s;
-    border-left: 4px solid transparent;
+.appointment-item {
+    padding: 1rem;
+    background: #ffffff;
+    border-radius: 10px;
+    border: 1px solid #e9ecef;
+    border-left: 4px solid #0d6efd;
+    transition: all 0.3s ease;
+    position: relative;
+    overflow: hidden;
 }
 
-.appointment-card:hover {
-    background: #f3f4f6;
+.appointment-item::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 4px;
+    height: 100%;
+    background: linear-gradient(180deg, #0d6efd 0%, #0a58ca 100%);
+    transition: width 0.3s ease;
+}
+
+.appointment-item:hover {
+    border-color: #0d6efd;
+    box-shadow: 0 4px 12px rgba(13, 110, 253, 0.15);
     transform: translateX(4px);
 }
 
-.apt-status {
-    width: 4px;
-    border-radius: 2px;
-    flex-shrink: 0;
+.appointment-item:hover::before {
+    width: 6px;
 }
 
-.apt-status.status-requested {
-    background: #3b82f6;
-}
-
-.apt-status.status-quoted {
-    background: #06b6d4;
-}
-
-.apt-status.status-confirmed {
-    background: #10b981;
-}
-
-.apt-status.status-completed {
-    background: #059669;
-}
-
-.apt-status.status-cancelled {
-    background: #ef4444;
-}
-
-.apt-content {
-    flex: 1;
-}
-
-.apt-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: start;
-    margin-bottom: 0.75rem;
-    gap: 1rem;
-}
-
-.apt-header h3 {
-    font-size: 1.125rem;
-    font-weight: 600;
-    color: #1f2937;
-    margin: 0;
-    text-transform: capitalize;
-}
-
-.status-badge {
-    padding: 0.25rem 0.75rem;
-    border-radius: 20px;
-    font-size: 0.75rem;
-    font-weight: 600;
-    text-transform: capitalize;
-    white-space: nowrap;
-}
-
-.status-badge.status-requested {
-    background: #dbeafe;
-    color: #1e40af;
-}
-
-.status-badge.status-quoted {
-    background: #cffafe;
-    color: #155e75;
-}
-
-.status-badge.status-confirmed {
-    background: #d1fae5;
-    color: #065f46;
-}
-
-.status-badge.status-completed {
-    background: #d1fae5;
-    color: #065f46;
-}
-
-.status-badge.status-cancelled {
-    background: #fee2e2;
-    color: #991b1b;
-}
-
-.apt-details {
+.appointment-details {
     display: flex;
     flex-direction: column;
     gap: 0.5rem;
+    margin-top: 0.5rem;
 }
 
-.apt-detail {
+.detail-item {
     display: flex;
-    align-items: start;
+    align-items: center;
     gap: 0.5rem;
-    color: #6b7280;
+    font-size: 0.875rem;
+    color: #6c757d;
+}
+
+.detail-item i {
+    width: 16px;
     font-size: 0.875rem;
 }
 
-.apt-detail i {
-    margin-top: 2px;
-    flex-shrink: 0;
+/* Quotations */
+.quotation-item {
+    padding: 1rem;
+    background: linear-gradient(135deg, #ffffff 0%, #fffbf0 100%);
+    border-radius: 8px;
+    border: 1px solid #ffe69c;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    position: relative;
 }
 
-/* Sidebar Section */
-.sidebar-section {
-    display: flex;
-    flex-direction: column;
-    gap: 1.5rem;
+.quotation-item::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    right: 1rem;
+    transform: translateY(-50%);
+    width: 8px;
+    height: 8px;
+    background: #ffc107;
+    border-radius: 50%;
+    animation: pulse 2s infinite;
 }
 
-/* Profile Card */
-.profile-card {
-    background: white;
-    border-radius: 16px;
-    padding: 1.5rem;
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+@keyframes pulse {
+    0%, 100% {
+        opacity: 1;
+        transform: translateY(-50%) scale(1);
+    }
+    50% {
+        opacity: 0.5;
+        transform: translateY(-50%) scale(1.2);
+    }
 }
 
-.profile-header {
-    text-align: center;
-    margin-bottom: 1.5rem;
+.quotation-item:hover {
+    background: linear-gradient(135deg, #fffbf0 0%, #fff3cd 100%);
+    box-shadow: 0 4px 12px rgba(255, 193, 7, 0.2);
+    transform: translateY(-2px);
 }
 
-.profile-avatar {
-    width: 100px;
-    height: 100px;
-    border-radius: 20px;
+/* Profile */
+.profile-photo-wrapper {
+    display: inline-block;
+    position: relative;
+    cursor: pointer;
+}
+
+.profile-photo {
+    width: 90px;
+    height: 90px;
+    border-radius: 50%;
     background: linear-gradient(135deg, #0d6efd 0%, #0a58ca 100%);
     display: flex;
     align-items: center;
     justify-content: center;
-    margin: 0 auto 1rem;
-    color: white;
-    font-size: 3rem;
-    cursor: pointer;
-    position: relative;
     overflow: hidden;
-    box-shadow: 0 8px 25px rgba(13, 110, 253, 0.4);
+    color: white;
+    font-size: 2.5rem;
+    box-shadow: 0 8px 16px rgba(13, 110, 253, 0.3);
+    transition: all 0.3s ease;
+    border: 4px solid #ffffff;
 }
 
-.profile-avatar img {
+.profile-photo-wrapper:hover .profile-photo {
+    transform: scale(1.05);
+    box-shadow: 0 12px 24px rgba(13, 110, 253, 0.4);
+}
+
+.profile-photo img {
     width: 100%;
     height: 100%;
     object-fit: cover;
 }
 
-.avatar-overlay {
+.profile-photo-edit {
     position: absolute;
-    inset: 0;
-    background: rgba(0, 0, 0, 0.6);
+    bottom: 0;
+    right: 0;
+    width: 32px;
+    height: 32px;
+    background: linear-gradient(135deg, #0d6efd 0%, #0a58ca 100%);
+    border: 3px solid white;
+    border-radius: 50%;
     display: flex;
     align-items: center;
     justify-content: center;
-    opacity: 0;
-    transition: opacity 0.3s;
     color: white;
-    font-size: 1.5rem;
-}
-
-.profile-avatar:hover .avatar-overlay {
-    opacity: 1;
-}
-
-.profile-header h3 {
-    font-size: 1.25rem;
-    font-weight: 700;
-    color: #1f2937;
-    margin: 0 0 0.25rem 0;
-}
-
-.profile-header p {
-    color: #10b981;
     font-size: 0.875rem;
-    margin: 0;
-    font-weight: 500;
+    transition: all 0.3s ease;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+}
+
+.profile-photo-wrapper:hover .profile-photo-edit {
+    transform: rotate(15deg) scale(1.1);
+    background: linear-gradient(135deg, #0a58ca 0%, #084298 100%);
 }
 
 .profile-info {
     display: flex;
     flex-direction: column;
-    gap: 1rem;
+    gap: 0.75rem;
 }
 
-.info-item {
+.profile-info-item {
     display: flex;
     align-items: start;
     gap: 1rem;
     padding: 1rem;
-    background: #f9fafb;
-    border-radius: 12px;
+    background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
+    border-radius: 8px;
+    border: 1px solid #e9ecef;
+    transition: all 0.3s ease;
 }
 
-.info-item i {
+.profile-info-item:hover {
+    border-color: #0d6efd;
+    box-shadow: 0 4px 12px rgba(13, 110, 253, 0.1);
+    transform: translateX(4px);
+}
+
+.profile-info-item i {
     color: #0d6efd;
     font-size: 1.25rem;
     margin-top: 2px;
 }
 
-.info-item div {
-    display: flex;
-    flex-direction: column;
-    gap: 0.25rem;
-    flex: 1;
-}
-
-.info-item .label {
-    color: #6b7280;
+.profile-info-item .label {
     font-size: 0.75rem;
+    color: #6c757d;
+    margin-bottom: 0.25rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
     font-weight: 500;
 }
 
-.info-item .value {
-    color: #1f2937;
+.profile-info-item .value {
     font-size: 0.875rem;
     font-weight: 600;
-    word-break: break-word;
-}
-
-/* Quotations Card */
-.quotations-card {
-    background: white;
-    border-radius: 16px;
-    padding: 1.5rem;
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
-}
-
-.quotations-card h3 {
-    font-size: 1.25rem;
-    font-weight: 700;
-    color: #1f2937;
-    margin: 0 0 1rem 0;
-}
-
-/* Empty State */
-.empty-state {
-    text-align: center;
-    padding: 3rem 1rem;
-    color: #9ca3af;
-}
-
-.empty-state i {
-    font-size: 4rem;
-    opacity: 0.3;
-    margin-bottom: 1rem;
-}
-
-.empty-state h3 {
-    font-size: 1.125rem;
-    font-weight: 600;
-    color: #6b7280;
-    margin: 0 0 0.5rem 0;
-}
-
-.empty-state p {
-    font-size: 0.875rem;
-    margin: 0;
-}
-
-.empty-state.small {
-    padding: 2rem 1rem;
-}
-
-.empty-state.small i {
-    font-size: 3rem;
-}
-
-.empty-state.small p {
-    margin-top: 0.5rem;
+    color: #212529;
 }
 
 /* Responsive */
-@media (max-width: 1024px) {
-    .content-grid {
-        grid-template-columns: 1fr;
-    }
-    
-    .sidebar-section {
-        grid-template-columns: 1fr 1fr;
-        display: grid;
-    }
-}
-
 @media (max-width: 768px) {
-    .main-content {
+    .modern-navbar {
         padding: 1rem;
     }
     
-    .welcome-section {
-        flex-direction: column;
-        align-items: start;
+    .nav-brand {
+        flex: 1;
     }
     
-    .stats-grid {
-        grid-template-columns: 1fr;
+    .brand-text {
+        font-size: 1.25rem;
     }
     
     .user-name {
         display: none;
     }
     
-    .sidebar-section {
-        grid-template-columns: 1fr;
-    }
-    
-    .apt-header {
-        flex-direction: column;
-        align-items: start;
-    }
-}
-
-@media (max-width: 480px) {
-    .welcome-text h1 {
-        font-size: 1.5rem;
-    }
-    
-    .btn-new-appointment {
-        width: 100%;
-        justify-content: center;
-    }
-    
-    .nav-content {
-        padding: 0 1rem;
-    }
-    
-    .brand-text {
-        font-size: 1.25rem;
+    .main-content {
+        padding: 1rem;
     }
 }
 </style>
