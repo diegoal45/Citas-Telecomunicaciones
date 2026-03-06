@@ -135,6 +135,9 @@
                                 <th>Estado</th>
                                 <th>Fecha</th>
                                 <th>Equipo</th>
+                                <th>Cotización</th>
+                                <th>Precio</th>
+                                <th>Acciones</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -144,9 +147,56 @@
                                 <td><span class="badge" :class="statusBadgeClass(apt.status)">{{ formatStatus(apt.status) }}</span></td>
                                 <td>{{ formatDate(apt.scheduled_date) }}</td>
                                 <td>{{ apt.teamName || 'Sin equipo' }}</td>
+                                <td>
+                                    <div class="small">Horas: {{ apt.quotation?.labor_hours ?? '-' }} | Personal: {{ apt.quotation?.required_staff ?? '-' }}</div>
+                                    <div class="small text-muted">{{ shortenText(apt.quotation?.materials || 'Sin materiales', 55) }}</div>
+                                </td>
+                                <td>{{ apt.quotation?.price ? apt.quotation.price : 'Sin precio' }}</td>
+                                <td>
+                                    <button
+                                        v-if="apt.status === 'cotizada' && apt.quotation && !apt.quotation.price"
+                                        class="btn btn-sm btn-outline-success"
+                                        :disabled="savingPrice"
+                                        @click="openPriceModal(apt.quotation.id, apt, apt.quotation)"
+                                    >
+                                        <i class="bi bi-tag me-1"></i>Poner precio
+                                    </button>
+                                    <span v-else class="text-muted small">Sin acciones</span>
+                                </td>
                             </tr>
                             <tr v-if="adminQueue.length === 0">
-                                <td colspan="5" class="text-center text-muted py-4">No hay citas pendientes de gestion</td>
+                                <td colspan="8" class="text-center text-muted py-4">No hay citas pendientes de gestion</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div class="card border-0 shadow-sm mt-3">
+                <div class="card-header bg-white border-0">
+                    <h6 class="mb-0 fw-bold">Citas Normales (Seguimiento)</h6>
+                </div>
+                <div class="table-responsive">
+                    <table class="table align-middle mb-0">
+                        <thead>
+                            <tr>
+                                <th>Cliente</th>
+                                <th>Tipo</th>
+                                <th>Estado</th>
+                                <th>Fecha</th>
+                                <th>Equipo</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr v-for="apt in normalQueue" :key="`normal-${apt.id}`">
+                                <td>{{ apt.clientName }}</td>
+                                <td class="text-capitalize">{{ apt.appointment_type }}</td>
+                                <td><span class="badge" :class="statusBadgeClass(apt.status)">{{ formatStatus(apt.status) }}</span></td>
+                                <td>{{ formatDate(apt.scheduled_date) }}</td>
+                                <td>{{ apt.teamName || 'Sin equipo' }}</td>
+                            </tr>
+                            <tr v-if="normalQueue.length === 0">
+                                <td colspan="5" class="text-center text-muted py-4">No hay citas normales</td>
                             </tr>
                         </tbody>
                     </table>
@@ -375,6 +425,62 @@
             </div>
         </div>
 
+        <!-- Modal: Asignar Precio a Cotización -->
+        <div v-if="showPriceModal" class="admin-modal-backdrop" @click="closePriceModal"></div>
+        <div v-if="showPriceModal" class="admin-modal-wrapper">
+            <div class="admin-modal" @click.stop style="max-width: 500px;">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h6 class="mb-0 fw-bold">Asignar Precio a Cotización</h6>
+                    <button class="btn btn-sm btn-outline-secondary" @click="closePriceModal">Cerrar</button>
+                </div>
+
+                <!-- Quotation Details Review -->
+                <div class="bg-light p-3 rounded mb-3" v-if="priceModalData.quotation">
+                    <div class="row g-2 small">
+                        <div class="col-6">
+                            <div class="text-muted">Horas de Trabajo</div>
+                            <div class="fw-bold">{{ priceModalData.quotation.labor_hours }} horas</div>
+                        </div>
+                        <div class="col-6">
+                            <div class="text-muted">Personal Requerido</div>
+                            <div class="fw-bold">{{ priceModalData.quotation.required_staff }} personas</div>
+                        </div>
+                        <div class="col-12 mt-2 pt-2 border-top">
+                            <div class="text-muted">Materiales</div>
+                            <div class="fw-bold small">{{ priceModalData.quotation.materials || '(Sin especificar)' }}</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Price Input -->
+                <div class="mb-3">
+                    <label class="form-label fw-bold">Precio Final (RD$)</label>
+                    <div class="input-group">
+                        <span class="input-group-text">RD$</span>
+                        <input
+                            v-model.number="priceModalData.price"
+                            type="number"
+                            class="form-control"
+                            :class="{ 'is-invalid': priceError }"
+                            placeholder="0.00"
+                            step="0.01"
+                            min="0"
+                            @keyup.enter="submitPrice"
+                        >
+                    </div>
+                    <div v-if="priceError" class="invalid-feedback d-block">{{ priceError }}</div>
+                </div>
+
+                <div class="d-flex justify-content-end gap-2">
+                    <button class="btn btn-outline-secondary" @click="closePriceModal" :disabled="savingPrice">Cancelar</button>
+                    <button class="btn btn-success" @click="submitPrice" :disabled="!priceModalData.price || savingPrice">
+                        <span v-if="savingPrice" class="spinner-border spinner-border-sm me-2"></span>
+                        {{ savingPrice ? 'Guardando...' : 'Asignar Precio' }}
+                    </button>
+                </div>
+            </div>
+        </div>
+
         <!-- Modal: Asignar Miembros -->
         <div v-if="showAssignModal" class="admin-modal-backdrop" @click="closeAssignModal"></div>
         <div v-if="showAssignModal" class="admin-modal-wrapper">
@@ -486,6 +592,18 @@ const selectedMembersToAdd = ref([]);
 const addingMembers = ref(false);
 const removingMembers = ref({});
 const deletingTeams = ref({});
+const approvingQuotations = ref({});
+
+// Price modal refs
+const showPriceModal = ref(false);
+const priceModalData = ref({
+    quotationId: null,
+    appointment: null,
+    quotation: null,
+    price: '',
+});
+const savingPrice = ref(false);
+const priceError = ref('');
 
 const usersPagination = ref({
     currentPage: 1,
@@ -551,16 +669,26 @@ const topTeams = computed(() => {
 });
 
 const adminQueue = computed(() => {
-    const queueStatuses = ['solicitada', 'pendiente_cotizacion', 'cotizada', 'aprobada', 'programada'];
-
     return appointments.value
-        .filter((a) => queueStatuses.includes(a.status))
+        .filter((a) => a.status === 'cotizada' && a.quotation && !a.quotation.price)
         .map((a) => ({
             ...a,
             clientName: a.client?.name || 'Cliente',
             teamName: a.team?.name || null,
         }))
         .sort((a, b) => new Date(a.scheduled_date) - new Date(b.scheduled_date))
+        .slice(0, 12);
+});
+
+const normalQueue = computed(() => {
+    return appointments.value
+        .filter((a) => !(a.status === 'cotizada' && a.quotation && !a.quotation.price))
+        .map((a) => ({
+            ...a,
+            clientName: a.client?.name || 'Cliente',
+            teamName: a.team?.name || null,
+        }))
+        .sort((a, b) => new Date(b.scheduled_date) - new Date(a.scheduled_date))
         .slice(0, 12);
 });
 
@@ -915,6 +1043,49 @@ const deleteTeam = async (team) => {
     }
 };
 
+const openPriceModal = (quotationId, appointment, quotation) => {
+    priceModalData.value = {
+        quotationId,
+        appointment,
+        quotation,
+        price: '',
+    };
+    priceError.value = '';
+    showPriceModal.value = true;
+};
+
+const closePriceModal = () => {
+    showPriceModal.value = false;
+    priceModalData.value = {
+        quotationId: null,
+        appointment: null,
+        quotation: null,
+        price: '',
+    };
+    priceError.value = '';
+};
+
+const submitPrice = async () => {
+    priceError.value = '';
+
+    const price = Number(priceModalData.value.price);
+    if (Number.isNaN(price) || price <= 0) {
+        priceError.value = 'El precio debe ser un número mayor a cero.';
+        return;
+    }
+
+    savingPrice.value = true;
+    try {
+        await api.put(`/api/quotations/${priceModalData.value.quotationId}/price`, { price });
+        closePriceModal();
+        await loadData();
+    } catch (err) {
+        priceError.value = err?.response?.data?.message || 'No se pudo asignar el precio a la cotización.';
+    } finally {
+        savingPrice.value = false;
+    }
+};
+
 // ===== End Team Management =====
 
 const formatStatus = (status) => {
@@ -954,6 +1125,12 @@ const formatDate = (date) => {
         hour: '2-digit',
         minute: '2-digit',
     });
+};
+
+const shortenText = (value, max = 60) => {
+    const text = `${value || ''}`;
+    if (text.length <= max) return text;
+    return `${text.slice(0, max)}...`;
 };
 
 onMounted(() => {

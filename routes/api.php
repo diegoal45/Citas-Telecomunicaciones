@@ -10,6 +10,7 @@ use App\Http\Controllers\QuotationController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\UserController;
+use App\Http\Controllers\TechLeaderController;
 
 // ===========================================
 // RUTAS PÚBLICAS
@@ -60,13 +61,13 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/appointments/{id}/reschedule', [AppointmentController::class, 'reschedule']);
     Route::post('/appointments/{id}/assign-team', [AppointmentController::class, 'assignTeam']);
     Route::post('/appointments/{id}/mark-cotizada', [AppointmentController::class, 'markAsCotizada']);
-    Route::post('/appointments/{id}/mark-executed', [AppointmentController::class, 'markAsExecuted']);
     
     // =======================================
     // COTIZACIONES
     // =======================================
     Route::post('/quotations', [QuotationController::class, 'store']);
     Route::put('/quotations/{id}/price', [QuotationController::class, 'setPrice']);
+    Route::post('/quotations/{id}/admin-approve', [QuotationController::class, 'adminApprove']);
     Route::post('/quotations/{id}/approve', [QuotationController::class, 'approve']);
     Route::post('/quotations/{id}/reject', [QuotationController::class, 'reject']);
     Route::post('/quotations/{id}/schedule', [QuotationController::class, 'scheduleExecution']);
@@ -77,6 +78,12 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/dashboard', [DashboardController::class, 'index']);
     Route::get('/dashboard/employee/{id}', [DashboardController::class, 'byEmployee']);
     Route::get('/dashboard/team/{id}', [DashboardController::class, 'byTeam']);
+    
+    // =======================================
+    // DASHBOARD TECNICO LIDER
+    // =======================================
+    Route::get('/tecnico/dashboard', [TechLeaderController::class, 'dashboard']);
+    Route::put('/appointments/{id}/execute', [TechLeaderController::class, 'executeAppointment']);
     
     // =======================================
     // NOTIFICACIONES

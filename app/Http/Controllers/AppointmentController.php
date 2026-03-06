@@ -124,6 +124,47 @@ class AppointmentController extends Controller
             ]);
         }
 
+        // Notificar al equipo asignado sobre la nueva cita
+        $team = $appointment->team()->with('leader', 'members')->first();
+        if ($team) {
+            // Notificar al líder
+            if ($team->leader) {
+                Notification::create([
+                    'user_id' => $team->leader_id,
+                    'type' => 'team_appointment_created',
+                    'title' => 'Nueva cita para tu equipo',
+                    'message' => "El cliente {$appointment->client->name} ha solicitado una nueva cita para el equipo {$team->name}. Fecha: " . \Carbon\Carbon::parse($appointment->scheduled_date)->format('d/m/Y H:i') . ".",
+                    'data' => [
+                        'appointment_id' => $appointment->id,
+                        'client_id' => $appointment->client_id,
+                        'client_name' => $appointment->client->name,
+                        'team_id' => $team->id,
+                        'team_name' => $team->name,
+                        'scheduled_date' => $appointment->scheduled_date,
+                    ]
+                ]);
+            }
+            
+            // Notificar a los miembros del equipo
+            $teamMembers = $team->members()->get();
+            foreach ($teamMembers as $member) {
+                Notification::create([
+                    'user_id' => $member->id,
+                    'type' => 'team_appointment_created',
+                    'title' => 'Nueva cita para tu equipo',
+                    'message' => "El cliente {$appointment->client->name} ha solicitado una nueva cita para el equipo {$team->name}. Fecha: " . \Carbon\Carbon::parse($appointment->scheduled_date)->format('d/m/Y H:i') . ".",
+                    'data' => [
+                        'appointment_id' => $appointment->id,
+                        'client_id' => $appointment->client_id,
+                        'client_name' => $appointment->client->name,
+                        'team_id' => $team->id,
+                        'team_name' => $team->name,
+                        'scheduled_date' => $appointment->scheduled_date,
+                    ]
+                ]);
+            }
+        }
+
         return response()->json($appointment->load('team'), 201);
     }
 
@@ -219,9 +260,19 @@ class AppointmentController extends Controller
             return response()->json(['error' => 'No autorizado'], 403);
         }
 
-        if (in_array($user->role->name, ['tecnico_lider', 'tecnico'])) {
+        if ($user->role->name === 'tecnico') {
             $teamIds = $user->teams()->pluck('team_id');
             if (!in_array($appointment->team_id, $teamIds->toArray())) {
+                return response()->json(['error' => 'No autorizado'], 403);
+            }
+        }
+
+        if ($user->role->name === 'tecnico_lider') {
+            $ledTeamIds = $user->ledTeams()->pluck('id');
+            $memberTeamIds = $user->teams()->pluck('team_id');
+            $allowedTeamIds = $ledTeamIds->merge($memberTeamIds)->unique();
+
+            if (!$allowedTeamIds->contains($appointment->team_id)) {
                 return response()->json(['error' => 'No autorizado'], 403);
             }
         }
@@ -247,17 +298,35 @@ class AppointmentController extends Controller
 
         // Notificar al equipo que la cita fue cancelada
         if ($appointment->team) {
+            // Notificar al líder
+            if ($appointment->team->leader) {
+                Notification::create([
+                    'user_id' => $appointment->team->leader_id,
+                    'type' => 'appointment_cancelled_team',
+                    'title' => 'Cita cancelada',
+                    'message' => "La cita del cliente {$appointment->client->name} ha sido cancelada por {$user->name}. Motivo: {$request->reason}",
+                    'data' => [
+                        'appointment_id' => $appointment->id,
+                        'client_name' => $appointment->client->name,
+                        'reason' => $request->reason,
+                        'cancelled_by' => $user->name
+                    ]
+                ]);
+            }
+            
+            // Notificar a los miembros del equipo
             $teamMembers = $appointment->team->members()->get();
             foreach ($teamMembers as $member) {
                 Notification::create([
                     'user_id' => $member->id,
                     'type' => 'appointment_cancelled_team',
                     'title' => 'Cita cancelada',
-                    'message' => "La cita del cliente {$appointment->client->name} ha sido cancelada. Motivo: {$request->reason}",
+                    'message' => "La cita del cliente {$appointment->client->name} ha sido cancelada por {$user->name}. Motivo: {$request->reason}",
                     'data' => [
                         'appointment_id' => $appointment->id,
                         'client_name' => $appointment->client->name,
-                        'reason' => $request->reason
+                        'reason' => $request->reason,
+                        'cancelled_by' => $user->name
                     ]
                 ]);
             }
@@ -286,10 +355,31 @@ class AppointmentController extends Controller
         ]);
 
         // Notificar a los miembros del equipo asignado
-        $team = \App\Models\Team::with('leader')->findOrFail($request->team_id);
+        $team = \App\Models\Team::with('leader', 'members')->findOrFail($request->team_id);
         $teamMembers = $team->members()->get();
         $teamLederName = $team->leader ? $team->leader->name : 'N/A';
         
+        // Notificar al líder del equipo
+        if ($team->leader) {
+            Notification::create([
+                'user_id' => $team->leader_id,
+                'type' => 'appointment_assigned',
+                'title' => 'Nueva cita asignada',
+                'message' => "{$user->name} te asignó la cotización del cliente {$appointment->client->name} al equipo {$team->name}. Tú serás quien irá.",
+                'data' => [
+                    'appointment_id' => $appointment->id,
+                    'team_id' => $team->id,
+                    'team_name' => $team->name,
+                    'client_name' => $appointment->client->name,
+                    'scheduled_date' => $appointment->scheduled_date,
+                    'assigned_by' => $user->name,
+                    'lead_technician' => $teamLederName,
+                    'lead_technician_id' => $team->leader_id,
+                ]
+            ]);
+        }
+        
+        // Notificar a los miembros del equipo
         foreach ($teamMembers as $member) {
             Notification::create([
                 'user_id' => $member->id,
@@ -328,12 +418,30 @@ class AppointmentController extends Controller
             'user_id' => $appointment->client_id,
             'type' => 'quotation_ready',
             'title' => 'Cotización lista',
-            'message' => "Tu cotización está lista para revisar",
+            'message' => "Tu cotización está lista para revisar. Preparada por el técnico {$user->name} del equipo {$appointment->team->name}.",
             'data' => [
                 'appointment_id' => $appointment->id,
-                'team_name' => $appointment->team->name
+                'team_name' => $appointment->team->name,
+                'prepared_by' => $user->name,
+                'prepared_by_id' => $user->id
             ]
         ]);
+        
+        // Notificar a los miembros del equipo que la cotización está lista
+        $teamMembers = $appointment->team->members()->get();
+        foreach ($teamMembers as $member) {
+            Notification::create([
+                'user_id' => $member->id,
+                'type' => 'quotation_ready_team',
+                'title' => 'Cotización lista para revisión',
+                'message' => "La cotización para el cliente {$appointment->client->name} ha sido preparada por {$user->name} y está lista.",
+                'data' => [
+                    'appointment_id' => $appointment->id,
+                    'client_name' => $appointment->client->name,
+                    'prepared_by' => $user->name
+                ]
+            ]);
+        }
         
         return response()->json(['message' => 'Cita marcada como cotizada']);
     }

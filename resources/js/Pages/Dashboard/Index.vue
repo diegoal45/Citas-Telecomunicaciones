@@ -143,9 +143,37 @@
                     <!-- Quotations Card -->
                     <div class="quotations-card">
                         <h3>Cotizaciones</h3>
-                        <div class="empty-state small">
+                        <div v-if="quotationsPendingApproval.length === 0" class="empty-state small">
                             <i class="bi bi-file-earmark-text"></i>
-                            <p>Sin cotizaciones</p>
+                            <p>Sin cotizaciones por aprobar</p>
+                        </div>
+                        <div v-else class="d-flex flex-column gap-2 mt-2">
+                            <div v-for="apt in quotationsPendingApproval" :key="`q-${apt.id}`" class="border rounded p-2 bg-white">
+                                <div class="d-flex justify-content-between align-items-center mb-1">
+                                    <strong class="small">{{ apt.team?.name || 'Equipo' }}</strong>
+                                    <span class="badge bg-info text-dark">Cotizada</span>
+                                </div>
+                                <div class="small text-muted mb-2">
+                                    Cita #{{ apt.id }} · {{ formatDate(apt.scheduled_date) }}
+                                </div>
+                                <div class="d-flex gap-2">
+                                    <button
+                                        class="btn btn-sm btn-success"
+                                        :disabled="quotationActionLoading[apt.quotation?.id]"
+                                        @click="approveQuotation(apt.quotation?.id)"
+                                    >
+                                        <span v-if="quotationActionLoading[apt.quotation?.id]" class="spinner-border spinner-border-sm me-1"></span>
+                                        Aprobar
+                                    </button>
+                                    <button
+                                        class="btn btn-sm btn-outline-danger"
+                                        :disabled="quotationActionLoading[apt.quotation?.id]"
+                                        @click="rejectQuotation(apt.quotation?.id)"
+                                    >
+                                        Rechazar
+                                    </button>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -155,7 +183,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue';
+import { ref, onMounted, computed } from 'vue';
 import AppLayout from '../../Layouts/AppLayout.vue';
 import NotificationBell from '../../Components/NotificationBell.vue';
 import NotificationPanel from '../../Components/NotificationPanel.vue';
@@ -172,6 +200,7 @@ const userProfile = ref({
 });
 const loadingAppointments = ref(false);
 const loadingProfile = ref(false);
+const quotationActionLoading = ref({});
 
 const {
     notifications,
@@ -220,6 +249,42 @@ const goToAppointments = () => {
     window.location.href = '/appointments/create';
 };
 
+const quotationsPendingApproval = computed(() => {
+    return appointments.value.filter((apt) => (
+        apt.status === 'cotizada' && apt.quotation && apt.quotation.price !== null && apt.quotation.price !== undefined
+    ));
+});
+
+const approveQuotation = async (quotationId) => {
+    if (!quotationId) return;
+
+    quotationActionLoading.value[quotationId] = true;
+    try {
+        await api.post(`/api/quotations/${quotationId}/approve`);
+        await loadAppointments();
+        await loadNotifications();
+    } catch (error) {
+        alert(error?.response?.data?.message || 'No se pudo aprobar la cotización.');
+    } finally {
+        quotationActionLoading.value[quotationId] = false;
+    }
+};
+
+const rejectQuotation = async (quotationId) => {
+    if (!quotationId) return;
+
+    quotationActionLoading.value[quotationId] = true;
+    try {
+        await api.post(`/api/quotations/${quotationId}/reject`);
+        await loadAppointments();
+        await loadNotifications();
+    } catch (error) {
+        alert(error?.response?.data?.message || 'No se pudo rechazar la cotización.');
+    } finally {
+        quotationActionLoading.value[quotationId] = false;
+    }
+};
+
 const formatDate = (date) => {
     if (!date) return '';
     const d = new Date(date);
@@ -251,6 +316,7 @@ const formatNotificationTime = (date) => {
 const statusClass = (status) => {
     const statusMap = {
         'solicitada': 'status-requested',
+        'pendiente_aprobacion_admin': 'status-requested',
         'cotizada': 'status-quoted',
         'confirmada': 'status-confirmed',
         'ejecutada': 'status-completed',

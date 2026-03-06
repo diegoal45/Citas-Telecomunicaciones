@@ -124,8 +124,10 @@ const handleLogin = async () => {
         const roleName = response.data?.user?.role?.name;
         if (roleName === 'admin') {
             window.location.href = '/admin/dashboard';
+        } else if (roleName === 'tecnico_lider') {
+            window.location.href = '/tecnico/dashboard';
         } else {
-            window.location.href = '/dashboard';
+            window.location.href = '/dashboard/client';
         }
         
     } catch (error) {

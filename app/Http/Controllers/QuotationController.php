@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Quotation;
 use App\Models\Appointment;
 use App\Models\Notification;
+use App\Models\User;
 use App\Http\Requests\StoreQuotationRequest;
 use App\Http\Requests\SetPriceRequest;
 use App\Http\Requests\ScheduleExecutionRequest;
@@ -36,14 +37,112 @@ class QuotationController extends Controller
             $request->validated()
         );
 
+        // La cotizacion queda en estado cotizada, pendiente de que admin asigne precio.
         $appointment->update(['status' => 'cotizada']);
+
+        // Notificar a administradores que hay una cotizacion lista para validar.
+        $admins = User::whereHas('role', function ($query) {
+            $query->where('name', 'admin');
+        })->get();
+
+        $user = Auth::user();
+        foreach ($admins as $admin) {
+            Notification::create([
+                'user_id' => $admin->id,
+                'type' => 'quotation_pending_admin',
+                'title' => 'Cotización pendiente de precio',
+                'message' => "{$user->name} creó una cotización para {$appointment->client->name}: {$quotation->labor_hours} horas, {$quotation->required_staff} personal. Falta que admin asigne precio.",
+                'data' => [
+                    'appointment_id' => $appointment->id,
+                    'quotation_id' => $quotation->id,
+                    'client_name' => $appointment->client->name,
+                    'team_name' => $appointment->team->name,
+                    'prepared_by' => $user->name,
+                    'materials' => $quotation->materials,
+                    'labor_hours' => $quotation->labor_hours,
+                    'required_staff' => $quotation->required_staff,
+                    'price' => $quotation->price,
+                ]
+            ]);
+        }
+
+        // Notificar al cliente con el detalle de su cotizacion (aun sin precio)
+        Notification::create([
+            'user_id' => $appointment->client_id,
+            'type' => 'quotation_created',
+            'title' => 'Cotización creada',
+            'message' => "Tu cotización fue creada: {$quotation->labor_hours} horas, {$quotation->required_staff} personal. Queda pendiente asignación de precio por administración.",
+            'data' => [
+                'appointment_id' => $appointment->id,
+                'quotation_id' => $quotation->id,
+                'team_name' => $appointment->team->name,
+                'materials' => $quotation->materials,
+                'labor_hours' => $quotation->labor_hours,
+                'required_staff' => $quotation->required_staff,
+                'price' => $quotation->price,
+            ]
+        ]);
+
+        // Notificar a los miembros del equipo que la cotización fue creada/actualizada
+        $teamMembers = $appointment->team->members()->get();
+        foreach ($teamMembers as $member) {
+            Notification::create([
+                'user_id' => $member->id,
+                'type' => 'quotation_created_team',
+                'title' => 'Cotización creada para revisión',
+                'message' => "La cotización para el cliente {$appointment->client->name} ha sido creada por {$user->name} y está lista para enviar.",
+                'data' => [
+                    'appointment_id' => $appointment->id,
+                    'client_name' => $appointment->client->name,
+                    'created_by' => $user->name
+                ]
+            ]);
+        }
 
         return response()->json($quotation->load('appointment'), 201);
     }
 
+    public function adminApprove($id)
+    {
+        $quotation = Quotation::with('appointment.client', 'appointment.team')->findOrFail($id);
+        $appointment = $quotation->appointment;
+        $admin = Auth::user();
+
+        if ($admin->role->name !== 'admin') {
+            return response()->json(['error' => 'No autorizado'], 403);
+        }
+
+        $appointment->update(['status' => 'cotizada']);
+
+        // Notificar al cliente que la cotizacion fue validada por admin y ya puede revisarla.
+        Notification::create([
+            'user_id' => $appointment->client_id,
+            'type' => 'quotation_ready',
+            'title' => 'Cotización lista para tu aprobación',
+            'message' => "Tu cotización fue validada por administración: {$quotation->labor_hours} horas, {$quotation->required_staff} personal" . ($quotation->price ? ", precio {$quotation->price}" : '') . '. Ya puedes aprobarla o rechazarla.',
+            'data' => [
+                'appointment_id' => $appointment->id,
+                'quotation_id' => $quotation->id,
+                'client_name' => $appointment->client->name,
+                'team_name' => $appointment->team->name,
+                'validated_by' => $admin->name,
+                'materials' => $quotation->materials,
+                'labor_hours' => $quotation->labor_hours,
+                'required_staff' => $quotation->required_staff,
+                'price' => $quotation->price,
+            ]
+        ]);
+
+        return response()->json([
+            'message' => 'Cotización aprobada por administración y enviada al cliente',
+            'appointment_id' => $appointment->id,
+            'quotation_id' => $quotation->id,
+        ]);
+    }
+
     public function setPrice(SetPriceRequest $request, $id)
     {
-        $quotation = Quotation::findOrFail($id);
+        $quotation = Quotation::with('appointment.client', 'appointment.team')->findOrFail($id);
         $user = Auth::user();
 
         // Solo el líder del equipo o admin puede establecer precio
@@ -52,6 +151,25 @@ class QuotationController extends Controller
         }
 
         $quotation->update(['price' => $request->price]);
+
+        // Cuando se asigna precio, la cotizacion ya se muestra al cliente para aprobar/rechazar.
+        $appointment = $quotation->appointment;
+        Notification::create([
+            'user_id' => $appointment->client_id,
+            'type' => 'quotation_ready',
+            'title' => 'Cotización lista para tu aprobación',
+            'message' => "Tu cotización ya tiene precio ({$quotation->price}) y está lista para que la apruebes o rechaces.",
+            'data' => [
+                'appointment_id' => $appointment->id,
+                'quotation_id' => $quotation->id,
+                'team_name' => $appointment->team->name,
+                'materials' => $quotation->materials,
+                'labor_hours' => $quotation->labor_hours,
+                'required_staff' => $quotation->required_staff,
+                'price' => $quotation->price,
+                'priced_by' => $user->name,
+            ]
+        ]);
 
         return response()->json($quotation);
     }
@@ -63,6 +181,10 @@ class QuotationController extends Controller
 
         if ($appointment->client_id !== Auth::id()) {
             return response()->json(['error' => 'No autorizado'], 403);
+        }
+
+        if (is_null($quotation->price)) {
+            return response()->json(['error' => 'La cotización aún no tiene precio asignado por administración'], 400);
         }
 
         // marca la cotización como aprobada, el cambio de tipo de cita
@@ -81,10 +203,12 @@ class QuotationController extends Controller
                     'user_id' => $member->id,
                     'type' => 'quotation_approved',
                     'title' => 'Cotización aprobada',
-                    'message' => "La cotización para el cliente {$appointment->client->name} ha sido aprobada",
+                    'message' => "El cliente {$appointment->client->name} aprobó la cotización. Para iniciar procede a programar la ejecución.",
                     'data' => [
                         'appointment_id' => $appointment->id,
                         'client_name' => $appointment->client->name,
+                        'client_id' => $appointment->client_id,
+                        'approved_by' => $appointment->client->name,
                         'scheduled_date' => $appointment->scheduled_date
                     ]
                 ]);
@@ -114,6 +238,10 @@ class QuotationController extends Controller
             return response()->json(['error' => 'No autorizado'], 403);
         }
 
+        if (is_null($quotation->price)) {
+            return response()->json(['error' => 'La cotización aún no tiene precio asignado por administración'], 400);
+        }
+
         $quotation->update(['rejected_at' => Carbon::now()]);
         $appointment->update(['status' => 'rechazada']);
 
@@ -125,10 +253,12 @@ class QuotationController extends Controller
                     'user_id' => $member->id,
                     'type' => 'quotation_rejected',
                     'title' => 'Cotización rechazada',
-                    'message' => "La cotización para el cliente {$appointment->client->name} ha sido rechazada",
+                    'message' => "El cliente {$appointment->client->name} rechazó la cotización. Puedes contactarlo para revisar los términos.",
                     'data' => [
                         'appointment_id' => $appointment->id,
-                        'client_name' => $appointment->client->name
+                        'client_name' => $appointment->client->name,
+                        'client_id' => $appointment->client_id,
+                        'rejected_by' => $appointment->client->name
                     ]
                 ]);
             }

@@ -2,6 +2,7 @@
 
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
+use App\Http\Controllers\DashboardRedirectController;
 
 Route::get('/', function () {
     return Inertia::render('Welcome');
@@ -16,15 +17,12 @@ Route::get('/register', function () {
     return Inertia::render('Auth/Register');
 })->name('register');
 
-// Ruta temporalmente publica para maquetar frontend.
-// Luego se protege con middleware cuando definamos el flujo final de auth web.
-Route::get('/dashboard', function () {
-    return Inertia::render('Dashboard/Index');
-})->name('dashboard');
-
-Route::get('/admin/dashboard', function () {
-    return Inertia::render('Dashboard/Admin');
-})->name('dashboard.admin');
+// Rutas de dashboard protegidas
+// Rutas de dashboard (manejo de autenticación en el frontend)
+Route::get('/dashboard', [DashboardRedirectController::class, 'client'])->name('dashboard');
+Route::get('/dashboard/client', [DashboardRedirectController::class, 'client'])->name('dashboard.client');
+Route::get('/admin/dashboard', [DashboardRedirectController::class, 'admin'])->name('dashboard.admin');
+Route::get('/tecnico/dashboard', [DashboardRedirectController::class, 'techLeader'])->name('dashboard.tecnico');
 
 Route::get('/appointments/create', function () {
     return Inertia::render('Appointments/Create');
