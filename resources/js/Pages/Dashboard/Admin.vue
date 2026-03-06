@@ -102,17 +102,22 @@
                 <div class="col-12 col-lg-4">
                     <div class="card border-0 shadow-sm h-100">
                         <div class="card-header bg-white border-0 pb-0">
-                            <h6 class="mb-0 fw-bold">Equipos y Carga</h6>
+                            <h6 class="mb-0 fw-bold">Equipos y Rendimiento</h6>
                         </div>
                         <div class="card-body">
                             <ul class="list-group list-group-flush">
                                 <li class="list-group-item px-0" v-for="team in topTeams" :key="team.id">
-                                    <div class="d-flex justify-content-between">
+                                    <div class="d-flex justify-content-between mb-1">
                                         <span class="fw-semibold">{{ team.name }}</span>
-                                        <span class="badge text-bg-primary">{{ team.activeAppointments }} citas</span>
+                                        <span class="badge text-bg-primary">{{ team.totalAppointments }} total</span>
+                                    </div>
+                                    <div class="d-flex gap-2 mb-1">
+                                        <span class="badge text-bg-warning">{{ team.activeAppointments }} activas</span>
+                                        <span class="badge text-bg-success">{{ team.completedAppointments }} completadas</span>
+                                        <span class="badge text-bg-secondary">{{ team.cancelledAppointments }} canceladas</span>
                                     </div>
                                     <small class="text-muted">
-                                        Lider: {{ team.leaderName }} | Miembros: {{ team.membersCount }}
+                                        Líder: {{ team.leaderName }} | Miembros: {{ team.membersCount }}
                                     </small>
                                 </li>
                                 <li v-if="topTeams.length === 0" class="text-muted small">Sin equipos</li>
@@ -123,8 +128,9 @@
             </div>
 
             <div class="card border-0 shadow-sm">
-                <div class="card-header bg-white border-0">
+                <div class="card-header bg-white border-0 d-flex justify-content-between align-items-center">
                     <h6 class="mb-0 fw-bold">Citas que Requieren Gestion del Admin</h6>
+                    <small class="text-muted">{{ adminQueueTotal }} total</small>
                 </div>
                 <div class="table-responsive">
                     <table class="table align-middle mb-0">
@@ -170,11 +176,28 @@
                         </tbody>
                     </table>
                 </div>
+                <!-- Paginación -->
+                <div v-if="adminQueueTotalPages > 1" class="card-footer bg-white border-0">
+                    <nav>
+                        <ul class="pagination pagination-sm mb-0 justify-content-center">
+                            <li class="page-item" :class="{ disabled: adminQueuePage === 1 }">
+                                <button class="page-link" @click="adminQueuePage = Math.max(1, adminQueuePage - 1)">Anterior</button>
+                            </li>
+                            <li v-for="page in adminQueueTotalPages" :key="page" class="page-item" :class="{ active: adminQueuePage === page }">
+                                <button class="page-link" @click="adminQueuePage = page">{{ page }}</button>
+                            </li>
+                            <li class="page-item" :class="{ disabled: adminQueuePage === adminQueueTotalPages }">
+                                <button class="page-link" @click="adminQueuePage = Math.min(adminQueueTotalPages, adminQueuePage + 1)">Siguiente</button>
+                            </li>
+                        </ul>
+                    </nav>
+                </div>
             </div>
 
             <div class="card border-0 shadow-sm mt-3">
-                <div class="card-header bg-white border-0">
+                <div class="card-header bg-white border-0 d-flex justify-content-between align-items-center">
                     <h6 class="mb-0 fw-bold">Citas Normales (Seguimiento)</h6>
+                    <small class="text-muted">{{ normalQueueTotal }} total</small>
                 </div>
                 <div class="table-responsive">
                     <table class="table align-middle mb-0">
@@ -200,6 +223,22 @@
                             </tr>
                         </tbody>
                     </table>
+                </div>
+                <!-- Paginación -->
+                <div v-if="normalQueueTotalPages > 1" class="card-footer bg-white border-0">
+                    <nav>
+                        <ul class="pagination pagination-sm mb-0 justify-content-center">
+                            <li class="page-item" :class="{ disabled: normalQueuePage === 1 }">
+                                <button class="page-link" @click="normalQueuePage = Math.max(1, normalQueuePage - 1)">Anterior</button>
+                            </li>
+                            <li v-for="page in normalQueueTotalPages" :key="page" class="page-item" :class="{ active: normalQueuePage === page }">
+                                <button class="page-link" @click="normalQueuePage = page">{{ page }}</button>
+                            </li>
+                            <li class="page-item" :class="{ disabled: normalQueuePage === normalQueueTotalPages }">
+                                <button class="page-link" @click="normalQueuePage = Math.min(normalQueueTotalPages, normalQueuePage + 1)">Siguiente</button>
+                            </li>
+                        </ul>
+                    </nav>
                 </div>
             </div>
 
@@ -428,54 +467,108 @@
         <!-- Modal: Asignar Precio a Cotización -->
         <div v-if="showPriceModal" class="admin-modal-backdrop" @click="closePriceModal"></div>
         <div v-if="showPriceModal" class="admin-modal-wrapper">
-            <div class="admin-modal" @click.stop style="max-width: 500px;">
-                <div class="d-flex justify-content-between align-items-center mb-3">
-                    <h6 class="mb-0 fw-bold">Asignar Precio a Cotización</h6>
-                    <button class="btn btn-sm btn-outline-secondary" @click="closePriceModal">Cerrar</button>
+            <div class="admin-modal" @click.stop style="max-width: 450px; padding: 1.25rem;">
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                    <h6 class="mb-0 fw-bold" style="font-size: 1rem;">Asignar Precio</h6>
+                    <button class="btn btn-sm btn-outline-secondary" @click="closePriceModal">×</button>
                 </div>
 
-                <!-- Quotation Details Review -->
-                <div class="bg-light p-3 rounded mb-3" v-if="priceModalData.quotation">
-                    <div class="row g-2 small">
-                        <div class="col-6">
-                            <div class="text-muted">Horas de Trabajo</div>
-                            <div class="fw-bold">{{ priceModalData.quotation.labor_hours }} horas</div>
-                        </div>
-                        <div class="col-6">
-                            <div class="text-muted">Personal Requerido</div>
-                            <div class="fw-bold">{{ priceModalData.quotation.required_staff }} personas</div>
-                        </div>
-                        <div class="col-12 mt-2 pt-2 border-top">
-                            <div class="text-muted">Materiales</div>
-                            <div class="fw-bold small">{{ priceModalData.quotation.materials || '(Sin especificar)' }}</div>
+                <!-- Quotation Details Review - Compact -->
+                <div class="bg-light p-2 rounded mb-2" v-if="priceModalData.quotation" style="font-size: 0.9rem;">
+                    <div class="row g-2">
+                        <div class="col-12">
+                            <div class="text-muted" style="font-size: 0.75rem;">Horas-Hombre Totales</div>
+                            <div class="fw-bold text-primary" style="font-size: 1rem;">{{ parseInt(priceModalData.quotation.labor_hours) }} H/H</div>
                         </div>
                     </div>
                 </div>
 
                 <!-- Price Input -->
-                <div class="mb-3">
-                    <label class="form-label fw-bold">Precio Final (RD$)</label>
-                    <div class="input-group">
-                        <span class="input-group-text">RD$</span>
+                <div class="mb-2">
+                    <label class="form-label fw-bold" style="font-size: 0.9rem; margin-bottom: 0.4rem;">Precio (COP)</label>
+                    <div class="input-group input-group-sm">
+                        <span class="input-group-text">$</span>
                         <input
                             v-model.number="priceModalData.price"
                             type="number"
                             class="form-control"
                             :class="{ 'is-invalid': priceError }"
-                            placeholder="0.00"
+                            placeholder="0"
                             step="0.01"
                             min="0"
-                            @keyup.enter="submitPrice"
+                            style="font-size: 0.9rem;"
                         >
                     </div>
-                    <div v-if="priceError" class="invalid-feedback d-block">{{ priceError }}</div>
+                    <div v-if="priceError" class="invalid-feedback d-block" style="font-size: 0.75rem;">{{ priceError }}</div>
+                </div>
+
+                <!-- Date Selection Calendar - Compact Grid -->
+                <div class="mb-2">
+                    <label class="form-label fw-bold" style="font-size: 0.9rem; margin-bottom: 0.4rem;">
+                        <i class="bi bi-calendar-event"></i> Fecha
+                    </label>
+                    <div class="d-grid gap-1" style="grid-template-columns: repeat(7, 1fr); margin-bottom: 0.5rem;">
+                        <button
+                            v-for="dateOption in priceModalData.availableDates"
+                            :key="dateOption.date"
+                            @click="priceModalData.scheduledDate = dateOption.available ? dateOption.date : priceModalData.scheduledDate"
+                            :disabled="!dateOption.available"
+                            :class="{
+                                'btn-success': priceModalData.scheduledDate === dateOption.date && dateOption.available,
+                                'btn-outline-success': priceModalData.scheduledDate !== dateOption.date && dateOption.available,
+                                'btn-outline-danger disabled opacity-50': !dateOption.available
+                            }"
+                            class="btn btn-sm"
+                            style="font-size: 0.65rem; padding: 0.35rem 0.15rem; height: 100%;"
+                            :title="dateOption.date"
+                        >
+                            <div>{{ dateOption.display.split(' ')[0].substring(0, 3) }}</div>
+                            <div style="font-size: 0.6rem;">{{ dateOption.display.split(' ')[2] }}</div>
+                        </button>
+                    </div>
+                    <div v-if="dateError" class="text-danger" style="font-size: 0.75rem;">{{ dateError }}</div>
+                </div>
+
+                <!-- Time Selection - With Availability -->
+                <div class="mb-2">
+                    <label class="form-label fw-bold" style="font-size: 0.9rem; margin-bottom: 0.4rem;">
+                        <i class="bi bi-clock"></i> Hora
+                    </label>
+                    <select
+                        v-model="priceModalData.scheduledTime"
+                        class="form-select form-select-sm"
+                        :disabled="!priceModalData.scheduledDate"
+                        style="font-size: 0.9rem;"
+                    >
+                        <option value="">-- Selecciona una hora --</option>
+                        <option
+                            v-for="timeOption in priceModalData.availableTimes"
+                            :key="timeOption.time"
+                            :value="timeOption.time"
+                            :disabled="!timeOption.available"
+                        >
+                            {{ timeOption.time }} {{ !timeOption.available ? '(Ocupado)' : '' }}
+                        </option>
+                    </select>
+                </div>
+
+                <!-- Selected Date and Time Summary -->
+                <div v-if="priceModalData.scheduledDate && priceModalData.scheduledTime" class="alert alert-info mb-2 py-2 px-2" style="font-size: 0.85rem; background: linear-gradient(135deg, #d1ecf1 0%, #bee5eb 100%); border: 1px solid #0c5460; margin-bottom: 1rem;">
+                    <i class="bi bi-info-circle-fill"></i><br>
+                    <div style="margin-top: 0.3rem;">
+                        <strong>{{ new Date(priceModalData.scheduledDate + 'T' + priceModalData.scheduledTime).toLocaleDateString('es-ES', { weekday: 'short', month: 'short', day: 'numeric' }) }}</strong><br>
+                        <strong style="color: #0c5460;">{{ priceModalData.scheduledTime }} - {{ String(parseInt(priceModalData.scheduledTime.split(':')[0]) + parseInt(priceModalData.quotation?.labor_hours || 2)).padStart(2, '0') }}:00</strong>
+                    </div>
+                    <small style="font-size: 0.75rem; margin-top: 0.3rem; display: block;">
+                        Bloquea: {{ parseInt(priceModalData.quotation?.labor_hours || 2) }} horas
+                    </small>
                 </div>
 
                 <div class="d-flex justify-content-end gap-2">
-                    <button class="btn btn-outline-secondary" @click="closePriceModal" :disabled="savingPrice">Cancelar</button>
-                    <button class="btn btn-success" @click="submitPrice" :disabled="!priceModalData.price || savingPrice">
-                        <span v-if="savingPrice" class="spinner-border spinner-border-sm me-2"></span>
-                        {{ savingPrice ? 'Guardando...' : 'Asignar Precio' }}
+                    <button class="btn btn-sm btn-outline-secondary" @click="closePriceModal" :disabled="savingPrice">Cancelar</button>
+                    <button class="btn btn-sm btn-success" @click="submitPrice" :disabled="!priceModalData.price || !priceModalData.scheduledDate || !priceModalData.scheduledTime || savingPrice">
+                        <span v-if="savingPrice" class="spinner-border spinner-border-sm me-1"></span>
+                        {{ savingPrice ? 'Guardando' : 'Guardar' }}
                     </button>
                 </div>
             </div>
@@ -548,7 +641,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue';
+import { ref, computed, onMounted, watch } from 'vue';
 import AppLayout from '../../Layouts/AppLayout.vue';
 import NotificationBell from '../../Components/NotificationBell.vue';
 import NotificationPanel from '../../Components/NotificationPanel.vue';
@@ -594,6 +687,11 @@ const removingMembers = ref({});
 const deletingTeams = ref({});
 const approvingQuotations = ref({});
 
+// Paginación de citas
+const adminQueuePage = ref(1);
+const normalQueuePage = ref(1);
+const itemsPerPage = 3;
+
 // Price modal refs
 const showPriceModal = ref(false);
 const priceModalData = ref({
@@ -601,9 +699,14 @@ const priceModalData = ref({
     appointment: null,
     quotation: null,
     price: '',
+    scheduledDate: '',
+    scheduledTime: '08:00',
+    availableDates: [],
+    availableTimes: [],
 });
 const savingPrice = ref(false);
 const priceError = ref('');
+const dateError = ref('');
 
 const usersPagination = ref({
     currentPage: 1,
@@ -656,47 +759,70 @@ const topTeams = computed(() => {
     return teams.value
         .map((t) => {
             const activeAppointments = appointments.value.filter((a) => a.team_id === t.id && !['cancelada', 'ejecutada'].includes(a.status)).length;
+            const completedAppointments = appointments.value.filter((a) => a.team_id === t.id && a.status === 'ejecutada').length;
+            const cancelledAppointments = appointments.value.filter((a) => a.team_id === t.id && a.status === 'cancelada').length;
             return {
                 id: t.id,
                 name: t.name,
                 leaderName: t.leader?.name || 'Sin lider',
                 membersCount: Array.isArray(t.members) ? t.members.length : 0,
                 activeAppointments,
+                completedAppointments,
+                cancelledAppointments,
+                totalAppointments: activeAppointments + completedAppointments + cancelledAppointments,
             };
         })
-        .sort((a, b) => b.activeAppointments - a.activeAppointments)
+        .sort((a, b) => b.totalAppointments - a.totalAppointments)
         .slice(0, 6);
 });
 
 const adminQueue = computed(() => {
-    return appointments.value
+    const filtered = appointments.value
         .filter((a) => a.status === 'cotizada' && a.quotation && !a.quotation.price)
         .map((a) => ({
             ...a,
             clientName: a.client?.name || 'Cliente',
             teamName: a.team?.name || null,
         }))
-        .sort((a, b) => new Date(a.scheduled_date) - new Date(b.scheduled_date))
-        .slice(0, 12);
+        .sort((a, b) => new Date(a.scheduled_date) - new Date(b.scheduled_date));
+    
+    return filtered.slice((adminQueuePage.value - 1) * itemsPerPage, adminQueuePage.value * itemsPerPage);
+});
+
+const adminQueueTotal = computed(() => {
+    return appointments.value.filter((a) => a.status === 'cotizada' && a.quotation && !a.quotation.price).length;
+});
+
+const adminQueueTotalPages = computed(() => {
+    return Math.ceil(adminQueueTotal.value / itemsPerPage);
 });
 
 const normalQueue = computed(() => {
-    return appointments.value
+    const filtered = appointments.value
         .filter((a) => !(a.status === 'cotizada' && a.quotation && !a.quotation.price))
         .map((a) => ({
             ...a,
             clientName: a.client?.name || 'Cliente',
             teamName: a.team?.name || null,
         }))
-        .sort((a, b) => new Date(b.scheduled_date) - new Date(a.scheduled_date))
-        .slice(0, 12);
+        .sort((a, b) => new Date(b.scheduled_date) - new Date(a.scheduled_date));
+    
+    return filtered.slice((normalQueuePage.value - 1) * itemsPerPage, normalQueuePage.value * itemsPerPage);
+});
+
+const normalQueueTotal = computed(() => {
+    return appointments.value.filter((a) => !(a.status === 'cotizada' && a.quotation && !a.quotation.price)).length;
+});
+
+const normalQueueTotalPages = computed(() => {
+    return Math.ceil(normalQueueTotal.value / itemsPerPage);
 });
 
 const metrics = computed(() => ({
     totalUsers: usersSummary.value.total,
     totalTeams: teams.value.length,
-    pendingAttention: adminQueue.value.length,
-    scheduledExecutions: appointments.value.filter((a) => a.status === 'programada').length,
+    pendingAttention: adminQueueTotal.value,
+    scheduledExecutions: appointments.value.filter((a) => ['para_ejecucion', 'programada'].includes(a.status)).length,
 }));
 
 const technicianUsers = computed(() => {
@@ -1044,13 +1170,48 @@ const deleteTeam = async (team) => {
 };
 
 const openPriceModal = (quotationId, appointment, quotation) => {
+    // Calcular fechas disponibles para los próximos 14 días
+    const availableDates = [];
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    
+    for (let i = 1; i <= 14; i++) {
+        const date = new Date(today);
+        date.setDate(date.getDate() + i);
+        const dateString = date.toISOString().split('T')[0];
+        
+        // Contar citas de este equipo en esa fecha
+        const hasConflict = appointments.value.some(a => 
+            a.team_id === appointment.team_id && 
+            a.id !== appointment.id &&
+            a.scheduled_date.split('T')[0] === dateString &&
+            !['cancelada', 'ejecutada'].includes(a.status)
+        );
+        
+        availableDates.push({
+            date: dateString,
+            dateObject: date,
+            available: !hasConflict,
+            display: date.toLocaleDateString('es-ES', { weekday: 'short', month: 'short', day: 'numeric' })
+        });
+    }
+    
     priceModalData.value = {
         quotationId,
         appointment,
         quotation,
         price: '',
+        scheduledDate: availableDates.find(d => d.available)?.date || '',
+        scheduledTime: '08:00',
+        availableDates,
+        availableTimes: [],
     };
+    // Generate available times for the selected date
+    if (priceModalData.value.scheduledDate) {
+        updateAvailableTimes(priceModalData.value.scheduledDate, appointment.team_id);
+    }
     priceError.value = '';
+    dateError.value = '';
     showPriceModal.value = true;
 };
 
@@ -1061,12 +1222,73 @@ const closePriceModal = () => {
         appointment: null,
         quotation: null,
         price: '',
+        scheduledDate: '',
+        scheduledTime: '08:00',
+        availableDates: [],
+        availableTimes: [],
     };
     priceError.value = '';
+    dateError.value = '';
+};
+
+// Watch for date changes and update available times
+watch(() => priceModalData.value.scheduledDate, (newDate) => {
+    if (newDate && priceModalData.value.appointment) {
+        updateAvailableTimes(newDate, priceModalData.value.appointment.team_id);
+        priceModalData.value.scheduledTime = '';
+    }
+});
+
+const updateAvailableTimes = (dateString, teamId) => {
+    const times = [];
+    // Duración de bloqueo = labor_hours de la cotización (ya es el total)
+    const newJobDuration = parseInt(priceModalData.value.quotation?.labor_hours || 2);
+    console.log('Updated times for date:', dateString, 'Duration:', newJobDuration, 'Hours (from quotation)');
+    
+    // Generate ALL hours: 00:00 to 23:00
+    for (let hour = 0; hour <= 23; hour++) {
+        const timeStr = hour.toString().padStart(2, '0') + ':00';
+        const proposedStartHour = hour;
+        const proposedEndHour = hour + newJobDuration;
+        
+        // Check if this time conflicts with any existing appointments (all statuses except cancelled/executed)
+        const hasTimeConflict = appointments.value.some(a => {
+            // Skip if not same team or if it's the same appointment being edited
+            if (a.team_id !== teamId || a.id === priceModalData.value.appointment.id) return false;
+            // Skip cancelled and executed appointments
+            if (['cancelada', 'ejecutada'].includes(a.status)) return false;
+            
+            const existingDate = a.scheduled_date.split('T')[0];
+            const existingTime = a.scheduled_date.split('T')[1]?.substring(0, 5);
+            
+            // Only check appointments on the same date
+            if (existingDate !== dateString) return false;
+            
+            // Get existing appointment duration (usar labor_hours directo, convertir a número)
+            const existingHour = parseInt(existingTime.split(':')[0]);
+            const existingDuration = parseInt(a.quotation?.labor_hours || 2);
+            const existingEndHour = existingHour + existingDuration;
+            
+            console.log(`Checking hour ${timeStr}: proposed ${proposedStartHour}-${proposedEndHour}, existing ${existingHour}-${existingEndHour}`);
+            
+            // Check for time overlap
+            // Conflict exists if: proposed start < existing end AND proposed end > existing start
+            return proposedStartHour < existingEndHour && proposedEndHour > existingHour;
+        });
+        
+        times.push({
+            time: timeStr,
+            available: !hasTimeConflict
+        });
+    }
+    console.log('Available times:', times);
+    
+    priceModalData.value.availableTimes = times;
 };
 
 const submitPrice = async () => {
     priceError.value = '';
+    dateError.value = '';
 
     const price = Number(priceModalData.value.price);
     if (Number.isNaN(price) || price <= 0) {
@@ -1074,9 +1296,22 @@ const submitPrice = async () => {
         return;
     }
 
+    if (!priceModalData.value.scheduledDate) {
+        dateError.value = 'Debes seleccionar una fecha para la ejecución.';
+        return;
+    }
+
+    if (!priceModalData.value.scheduledTime) {
+        dateError.value = 'Debes seleccionar una hora para la ejecución.';
+        return;
+    }
+
     savingPrice.value = true;
     try {
-        await api.put(`/api/quotations/${priceModalData.value.quotationId}/price`, { price });
+        await api.put(`/api/quotations/${priceModalData.value.quotationId}/price`, { 
+            price,
+            scheduled_date: priceModalData.value.scheduledDate + 'T' + priceModalData.value.scheduledTime + ':00Z'
+        });
         closePriceModal();
         await loadData();
     } catch (err) {
@@ -1094,8 +1329,9 @@ const formatStatus = (status) => {
         pendiente_cotizacion: 'Pendiente cotizacion',
         cotizada: 'Cotizada',
         aprobada: 'Aprobada',
-        rechazada: 'Rechazada',
+        para_ejecucion: 'Para Ejecución',
         programada: 'Programada',
+        rechazada: 'Rechazada',
         ejecutada: 'Ejecutada',
         cancelada: 'Cancelada',
     };
@@ -1108,6 +1344,7 @@ const statusBadgeClass = (status) => {
         pendiente_cotizacion: 'text-bg-warning',
         cotizada: 'text-bg-info',
         aprobada: 'text-bg-success',
+        para_ejecucion: 'text-bg-success',
         programada: 'text-bg-success',
         rechazada: 'text-bg-secondary',
         ejecutada: 'text-bg-dark',

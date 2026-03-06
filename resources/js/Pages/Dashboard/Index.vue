@@ -34,7 +34,7 @@
                     </div>
                     <div class="stat-info">
                         <span class="stat-label">Próximas Citas</span>
-                        <span class="stat-value">{{ appointments.length }}</span>
+                        <span class="stat-value">{{ activeAppointments.length }}</span>
                     </div>
                 </div>
 
@@ -44,7 +44,7 @@
                     </div>
                     <div class="stat-info">
                         <span class="stat-label">Completadas</span>
-                        <span class="stat-value">0</span>
+                        <span class="stat-value">{{ completedAppointments.length }}</span>
                     </div>
                 </div>
 
@@ -53,8 +53,8 @@
                         <i class="bi bi-clock-fill"></i>
                     </div>
                     <div class="stat-info">
-                        <span class="stat-label">Pendientes</span>
-                        <span class="stat-value">0</span>
+                        <span class="stat-label">Canceladas</span>
+                        <span class="stat-value">{{ cancelledAppointments.length }}</span>
                     </div>
                 </div>
             </div>
@@ -64,18 +64,47 @@
                 <!-- Appointments Section -->
                 <div class="appointments-section">
                     <div class="section-header">
-                        <h2>Próximas Citas</h2>
-                        <span class="badge-count">{{ appointments.length }}</span>
+                        <h2>Mis Citas</h2>
                     </div>
 
-                    <div v-if="appointments.length === 0" class="empty-state">
+                    <!-- Filtros -->
+                    <div class="mb-3">
+                        <div class="btn-group" role="group">
+                            <button 
+                                type="button" 
+                                class="btn btn-sm"
+                                :class="appointmentFilter === 'activas' ? 'btn-primary' : 'btn-outline-primary'"
+                                @click="appointmentFilter = 'activas'"
+                            >
+                                Activas ({{ activeAppointments.length }})
+                            </button>
+                            <button 
+                                type="button" 
+                                class="btn btn-sm"
+                                :class="appointmentFilter === 'completadas' ? 'btn-success' : 'btn-outline-success'"
+                                @click="appointmentFilter = 'completadas'"
+                            >
+                                Completadas ({{ completedAppointments.length }})
+                            </button>
+                            <button 
+                                type="button" 
+                                class="btn btn-sm"
+                                :class="appointmentFilter === 'canceladas' ? 'btn-secondary' : 'btn-outline-secondary'"
+                                @click="appointmentFilter = 'canceladas'"
+                            >
+                                Canceladas ({{ cancelledAppointments.length }})
+                            </button>
+                        </div>
+                    </div>
+
+                    <div v-if="filteredAppointments.length === 0" class="empty-state">
                         <i class="bi bi-calendar-x"></i>
-                        <h3>No tienes citas agendadas</h3>
-                        <p>Agenda tu primera cita para comenzar</p>
+                        <h3>No hay citas {{ appointmentFilter === 'activas' ? 'activas' : appointmentFilter }}</h3>
+                        <p v-if="appointmentFilter === 'activas'">Agenda tu primera cita para comenzar</p>
                     </div>
 
                     <div v-else class="appointments-list">
-                        <div v-for="apt in appointments" :key="apt.id" class="appointment-card">
+                        <div v-for="apt in filteredAppointments" :key="apt.id" class="appointment-card">
                             <div class="apt-status" :class="statusClass(apt.status)"></div>
                             <div class="apt-content">
                                 <div class="apt-header">
@@ -94,8 +123,37 @@
                                         <span>{{ apt.address }}</span>
                                     </div>
                                 </div>
+                                <div class="apt-actions mt-2" v-if="!['cancelada', 'ejecutada'].includes(apt.status)">
+                                    <button
+                                        class="btn btn-sm btn-outline-danger"
+                                        :disabled="cancellingAppointments[apt.id]"
+                                        @click="showCancelConfirm(apt)"
+                                        title="Cancelar esta cita"
+                                    >
+                                        <span v-if="cancellingAppointments[apt.id]" class="spinner-border spinner-border-sm me-1"></span>
+                                        <i v-else class="bi bi-x-circle me-1"></i>
+                                        Cancelar
+                                    </button>
+                                </div>
                             </div>
                         </div>
+                    </div>
+
+                    <!-- Paginación -->
+                    <div v-if="totalPages > 1" class="mt-3">
+                        <nav>
+                            <ul class="pagination pagination-sm justify-content-center mb-0">
+                                <li class="page-item" :class="{ disabled: currentPage === 1 }">
+                                    <button class="page-link" @click="currentPage = Math.max(1, currentPage - 1)">Anterior</button>
+                                </li>
+                                <li v-for="page in totalPages" :key="page" class="page-item" :class="{ active: currentPage === page }">
+                                    <button class="page-link" @click="currentPage = page">{{ page }}</button>
+                                </li>
+                                <li class="page-item" :class="{ disabled: currentPage === totalPages }">
+                                    <button class="page-link" @click="currentPage = Math.min(totalPages, currentPage + 1)">Siguiente</button>
+                                </li>
+                            </ul>
+                        </nav>
                     </div>
                 </div>
 
@@ -148,7 +206,7 @@
                             <p>Sin cotizaciones por aprobar</p>
                         </div>
                         <div v-else class="d-flex flex-column gap-2 mt-2">
-                            <div v-for="apt in quotationsPendingApproval" :key="`q-${apt.id}`" class="border rounded p-2 bg-white">
+                            <div v-for="apt in quotationsPendingApproval" :key="`q-${apt.id}`" class="border rounded p-2 bg-white cursor-pointer hover-highlight" @click="openQuotationModal(apt)" style="cursor: pointer; transition: all 0.2s;">
                                 <div class="d-flex justify-content-between align-items-center mb-1">
                                     <strong class="small">{{ apt.team?.name || 'Equipo' }}</strong>
                                     <span class="badge bg-info text-dark">Cotizada</span>
@@ -156,34 +214,122 @@
                                 <div class="small text-muted mb-2">
                                     Cita #{{ apt.id }} · {{ formatDate(apt.scheduled_date) }}
                                 </div>
-                                <div class="d-flex gap-2">
-                                    <button
-                                        class="btn btn-sm btn-success"
-                                        :disabled="quotationActionLoading[apt.quotation?.id]"
-                                        @click="approveQuotation(apt.quotation?.id)"
-                                    >
-                                        <span v-if="quotationActionLoading[apt.quotation?.id]" class="spinner-border spinner-border-sm me-1"></span>
-                                        Aprobar
-                                    </button>
-                                    <button
-                                        class="btn btn-sm btn-outline-danger"
-                                        :disabled="quotationActionLoading[apt.quotation?.id]"
-                                        @click="rejectQuotation(apt.quotation?.id)"
-                                    >
-                                        Rechazar
-                                    </button>
+                                <div class="small text-primary" style="font-size: 0.8rem;">
+                                    <i class="bi bi-info-circle me-1"></i>Haz click para ver detalles y decidir
                                 </div>
                             </div>
                         </div>
                     </div>
                 </div>
             </div>
-        </main>
+<!-- Quotation Details Modal -->
+            <div v-if="showQuotationModal" style="position: fixed; inset: 0; background: rgba(0, 0, 0, 0.5); z-index: 1060; display: flex; align-items: center; justify-content: center;" @click="closeQuotationModal">
+                <div v-if="selectedQuotation" class="card" style="width: 100%; max-width: 450px; margin: auto;" @click.stop>
+                    <!-- Modal Header -->
+                    <div class="bg-primary text-white p-3">
+                        <div class="d-flex justify-content-between align-items-start">
+                            <div>
+                                <h6 class="mb-0 fw-bold">Revisión de Cotización</h6>
+                            </div>
+                            <button type="button" class="btn-close btn-close-white" style="background: none; border: none; font-size: 1.3rem; cursor: pointer;" @click="closeQuotationModal">×</button>
+                        </div>
+                    </div>
+                    
+                    <!-- Modal Body -->
+                    <div class="card-body p-3">
+                        <!-- Appointment Info -->
+                        <div class="mb-2 pb-2 border-bottom">
+                            <h6 class="fw-bold mb-2" style="font-size: 0.9rem;">Info de la Cita</h6>
+                            <div class="row g-2" style="font-size: 0.85rem;">
+                                <div class="col-6">
+                                    <small class="text-muted">Equipo</small>
+                                    <div class="fw-semibold">{{ selectedQuotation.team?.name || 'Sin equipo' }}</div>
+                                </div>
+                                <div class="col-6">
+                                    <small class="text-muted">Dirección</small>
+                                    <div class="fw-semibold small">{{ selectedQuotation.address || '—' }}</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Date and Time -->
+                        <div class="mb-2 pb-2 border-bottom">
+                            <h6 class="fw-bold mb-2" style="font-size: 0.9rem;">Programación</h6>
+                            <div style="font-size: 0.85rem;">
+                                <small class="text-muted">Fecha y Hora</small>
+                                <div class="fw-semibold">
+                                    {{ new Date(selectedQuotation.scheduled_date).toLocaleDateString('es-ES', { weekday: 'short', month: 'short', day: 'numeric' }) }}
+                                    {{ selectedQuotation.scheduled_date?.split('T')[1]?.substring(0, 5) || '—' }}
+                                    <span v-if="selectedQuotation.quotation?.labor_hours" class="text-muted" style="font-size: 0.75rem;">
+                                        - {{ String(parseInt(selectedQuotation.scheduled_date?.split('T')[1]?.split(':')[0] || 0) + parseInt(selectedQuotation.quotation?.labor_hours || 0)).padStart(2, '0') }}:00
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Quotation Details -->
+                        <div class="mb-2 pb-2 border-bottom">
+                            <h6 class="fw-bold mb-2" style="font-size: 0.9rem;">Detalles</h6>
+                            <div style="font-size: 0.85rem;">
+                                <div class="row g-2">
+                                    <div class="col-6">
+                                        <small class="text-muted">Horas</small>
+                                        <div class="fw-bold">{{ selectedQuotation.quotation?.labor_hours || '0' }} H</div>
+                                    </div>
+                                    <div class="col-6">
+                                        <small class="text-muted">Personal</small>
+                                        <div class="fw-bold">{{ selectedQuotation.quotation?.required_staff || '0' }} p</div>
+                                    </div>
+                                </div>
+                                <div class="mt-2">
+                                    <small class="text-muted">Materiales</small>
+                                    <div class="fw-semibold small">{{ selectedQuotation.quotation?.materials || '(Sin especificar)' }}</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Price Section -->
+                        <div class="mb-2">
+                            <h6 class="fw-bold mb-2" style="font-size: 0.9rem;">Precio</h6>
+                            <div class="fw-bold text-success" style="font-size: 1.3rem;">
+                                COP {{ selectedQuotation.quotation?.price ? new Intl.NumberFormat('es-CO', { minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(Math.round(selectedQuotation.quotation.price)) : '0' }}
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Modal Footer -->
+                    <div class="card-footer bg-light d-flex gap-2 justify-content-end p-2">
+                        <button type="button" class="btn btn-sm btn-outline-secondary" @click="closeQuotationModal">
+                            Cancelar
+                        </button>
+                        <button
+                            type="button"
+                            class="btn btn-sm btn-danger"
+                            :disabled="quotationActionLoading[selectedQuotation.quotation?.id]"
+                            @click="rejectAndClose"
+                        >
+                            <span v-if="quotationActionLoading[selectedQuotation.quotation?.id]" class="spinner-border spinner-border-sm me-1"></span>
+                            Rechazar
+                        </button>
+                        <button
+                            type="button"
+                            class="btn btn-sm btn-success"
+                            :disabled="quotationActionLoading[selectedQuotation.quotation?.id]"
+                            @click="approveAndClose"
+                        >
+                            <span v-if="quotationActionLoading[selectedQuotation.quotation?.id]" class="spinner-border spinner-border-sm me-1"></span>
+                            Aprobar
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+                </main>
     </AppLayout>
 </template>
 
 <script setup>
-import { ref, onMounted, computed } from 'vue';
+import { ref, onMounted, computed, watch } from 'vue';
 import AppLayout from '../../Layouts/AppLayout.vue';
 import NotificationBell from '../../Components/NotificationBell.vue';
 import NotificationPanel from '../../Components/NotificationPanel.vue';
@@ -201,6 +347,12 @@ const userProfile = ref({
 const loadingAppointments = ref(false);
 const loadingProfile = ref(false);
 const quotationActionLoading = ref({});
+const cancellingAppointments = ref({});
+const showQuotationModal = ref(false);
+const selectedQuotation = ref(null);
+const appointmentFilter = ref('activas'); // 'activas', 'completadas', 'canceladas', 'todas'
+const currentPage = ref(1);
+const itemsPerPage = 3;
 
 const {
     notifications,
@@ -249,9 +401,47 @@ const goToAppointments = () => {
     window.location.href = '/appointments/create';
 };
 
+const activeAppointments = computed(() => {
+    return appointments.value.filter((apt) => !['cancelada', 'ejecutada'].includes(apt.status));
+});
+
+const completedAppointments = computed(() => {
+    return appointments.value.filter((apt) => apt.status === 'ejecutada');
+});
+
+const cancelledAppointments = computed(() => {
+    return appointments.value.filter((apt) => apt.status === 'cancelada');
+});
+
+const allFilteredAppointments = computed(() => {
+    if (appointmentFilter.value === 'activas') return activeAppointments.value;
+    if (appointmentFilter.value === 'completadas') return completedAppointments.value;
+    if (appointmentFilter.value === 'canceladas') return cancelledAppointments.value;
+    return appointments.value; // todas
+});
+
+const filteredAppointments = computed(() => {
+    const start = (currentPage.value - 1) * itemsPerPage;
+    const end = start + itemsPerPage;
+    return allFilteredAppointments.value.slice(start, end);
+});
+
+const totalPages = computed(() => {
+    return Math.ceil(allFilteredAppointments.value.length / itemsPerPage);
+});
+
+// Reset a página 1 cuando cambia el filtro
+watch(appointmentFilter, () => {
+    currentPage.value = 1;
+});
+
 const quotationsPendingApproval = computed(() => {
     return appointments.value.filter((apt) => (
-        apt.status === 'cotizada' && apt.quotation && apt.quotation.price !== null && apt.quotation.price !== undefined
+        ['cotizada', 'para_ejecucion'].includes(apt.status) && 
+        apt.quotation && 
+        apt.quotation.price !== null && 
+        apt.quotation.price !== undefined &&
+        !apt.quotation.approved_at // Solo mostrar si no ha sido aprobada aún
     ));
 });
 
@@ -283,6 +473,55 @@ const rejectQuotation = async (quotationId) => {
     } finally {
         quotationActionLoading.value[quotationId] = false;
     }
+};
+
+let appointmentToCancel = null;
+
+const showCancelConfirm = (appointment) => {
+    appointmentToCancel = appointment;
+    const confirmed = confirm(`¿Estás seguro de que deseas cancelar la cita del ${new Date(appointment.scheduled_date).toLocaleDateString('es-ES', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}?`);
+    if (confirmed) {
+        cancelAppointment(appointment.id);
+    }
+};
+
+const cancelAppointment = async (appointmentId) => {
+    if (!appointmentId) return;
+
+    cancellingAppointments.value[appointmentId] = true;
+    try {
+        await api.post(`/api/appointments/${appointmentId}/cancel`, {
+            reason: 'Cancelada por el cliente'
+        });
+        await loadAppointments();
+        await loadNotifications();
+    } catch (error) {
+        alert(error?.response?.data?.message || 'No se pudo cancelar la cita.');
+    } finally {
+        cancellingAppointments.value[appointmentId] = false;
+    }
+};
+
+const openQuotationModal = (appointment) => {
+    selectedQuotation.value = appointment;
+    showQuotationModal.value = true;
+};
+
+const closeQuotationModal = () => {
+    showQuotationModal.value = false;
+    selectedQuotation.value = null;
+};
+
+const approveAndClose = async () => {
+    if (!selectedQuotation.value?.quotation?.id) return;
+    await approveQuotation(selectedQuotation.value.quotation.id);
+    closeQuotationModal();
+};
+
+const rejectAndClose = async () => {
+    if (!selectedQuotation.value?.quotation?.id) return;
+    await rejectQuotation(selectedQuotation.value.quotation.id);
+    closeQuotationModal();
 };
 
 const formatDate = (date) => {
@@ -323,6 +562,16 @@ const statusClass = (status) => {
         'cancelada': 'status-cancelled'
     };
     return statusMap[status] || 'status-default';
+};
+
+const formatCurrency = (price) => {
+    if (!price) return 'COP 0';
+    return new Intl.NumberFormat('es-CO', {
+        style: 'currency',
+        currency: 'COP',
+        minimumFractionDigits: 0,
+        maximumFractionDigits: 0,
+    }).format(price);
 };
 
 const uploadProfilePhoto = async (event) => {

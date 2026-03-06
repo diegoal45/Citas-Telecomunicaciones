@@ -46,13 +46,13 @@ class TechLeaderController extends Controller
         $user = Auth::user();
 
         // Verificar que sea técnico líder del equipo
-        if (!$user->ledTeams()->where('team_id', $appointment->team_id)->exists()) {
+        if (!$user->ledTeams()->where('id', $appointment->team_id)->exists()) {
             return response()->json(['error' => 'No autorizado'], 403);
         }
 
-        // Verificar que esté en estado programada
-        if ($appointment->status !== 'programada') {
-            return response()->json(['error' => 'La cita debe estar en estado programada'], 400);
+        // Verificar que esté en estado para_ejecucion o programada
+        if (!in_array($appointment->status, ['para_ejecucion', 'programada'])) {
+            return response()->json(['error' => 'La cita debe estar lista para ejecución'], 400);
         }
 
         $appointment->update(['status' => 'ejecutada']);

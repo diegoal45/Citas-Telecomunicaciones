@@ -16,29 +16,9 @@ class AppointmentController extends Controller
 {
     public function store(StoreAppointmentRequest $request)
     {
-        // Buscar un técnico líder disponible
+        // Buscar un técnico líder disponible - distribuir carga equitativamente
         $scheduledDate = $request->scheduled_date;
-
-        // Preferencia: si el cliente ya ha tenido una cita previa con un equipo
-        // (por ejemplo una cotización aprobada o ejecución programada), tratamos
-        // de reutilizar ese mismo equipo siempre que no tenga conflicto de fecha.
-        $preferredTeam = null;
-        $lastAppointment = Appointment::where('client_id', Auth::id())
-            ->whereNotIn('status', ['cancelada'])
-            // prefer the most recently created record when dates tie
-            ->orderBy('scheduled_date', 'desc')
-            ->orderBy('created_at', 'desc')
-            ->first();
-        if ($lastAppointment && $lastAppointment->team_id) {
-            $preferredTeam = $lastAppointment->team_id;
-            // comprobar si el equipo preferido está libre en la fecha solicitada
-            $conflict = Appointment::where('team_id', $preferredTeam)
-                ->whereDate('scheduled_date', Carbon::parse($scheduledDate)->toDateString())
-                ->exists();
-            if ($conflict) {
-                $preferredTeam = null; // si hay conflicto, no lo usamos
-            }
-        }
+        $dateOnly = Carbon::parse($scheduledDate)->toDateString();
 
         // Obtener todos los técnicos líderes con sus equipos
         $techLeaders = User::whereHas('role', function($query) {
@@ -51,36 +31,48 @@ class AppointmentController extends Controller
             ], 400);
         }
 
-        // Determinar el equipo a asignar: preferencia primero, de lo contrario el
-        // primer equipo libre que encuentre la búsqueda estándar.
-        $availableTeam = $preferredTeam;
-        if (is_null($availableTeam)) {
-            foreach ($techLeaders as $techLeader) {
-                // Obtener los equipos que lidera
-                $ledTeamIds = $techLeader->ledTeams()->pluck('id');
-                
-                if ($ledTeamIds->isEmpty()) {
-                    continue; // Este líder no lidera ningún equipo
-                }
+        // Buscar todos los equipos disponibles (sin cita en esa fecha)
+        $availableTeamsWithLoad = [];
+        
+        foreach ($techLeaders as $techLeader) {
+            $ledTeamIds = $techLeader->ledTeams()->pluck('id');
+            
+            if ($ledTeamIds->isEmpty()) {
+                continue;
+            }
 
-                // Verificar si alguno de sus equipos está disponible en esa fecha
-                $appointmentInDate = Appointment::whereIn('team_id', $ledTeamIds)
-                    ->whereDate('scheduled_date', Carbon::parse($scheduledDate)->toDateString())
+            foreach ($ledTeamIds as $teamId) {
+                // Verificar si el equipo tiene cita en esa fecha
+                $conflictInDate = Appointment::where('team_id', $teamId)
+                    ->whereDate('scheduled_date', $dateOnly)
                     ->exists();
 
-                if (!$appointmentInDate) {
-                    // Este equipo está disponible
-                    $availableTeam = $ledTeamIds->first();
-                    break;
+                if (!$conflictInDate) {
+                    // Equipo disponible en esa fecha - contar citas activas
+                    $activeCitasCount = Appointment::where('team_id', $teamId)
+                        ->whereNotIn('status', ['cancelada', 'ejecutada'])
+                        ->count();
+                    
+                    $availableTeamsWithLoad[] = [
+                        'team_id' => $teamId,
+                        'active_count' => $activeCitasCount
+                    ];
                 }
             }
         }
 
-        if (!$availableTeam) {
+        if (empty($availableTeamsWithLoad)) {
             return response()->json([
-                'error' => 'No hay tecnicos líderes disponibles en la fecha y hora solicitada'
+                'error' => 'No hay técnicos líderes disponibles en la fecha y hora solicitada'
             ], 400);
         }
+
+        // Seleccionar el equipo con menos citas activas (balanceo de carga)
+        usort($availableTeamsWithLoad, function($a, $b) {
+            return $a['active_count'] - $b['active_count'];
+        });
+
+        $availableTeam = $availableTeamsWithLoad[0]['team_id'];
 
         // Crear la cita con el equipo asignado
         $appointment = Appointment::create([

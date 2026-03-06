@@ -66,7 +66,7 @@
                                 <li class="list-group-item px-0" v-for="team in myTeams" :key="team.id">
                                     <div class="d-flex justify-content-between">
                                         <span class="fw-semibold">{{ team.name }}</span>
-                                        <span class="badge text-bg-primary">{{ team.appointments?.length || 0 }} citas</span>
+                                        <span class="badge text-bg-primary">{{ getTeamActiveCitasCount(team.id) }} citas</span>
                                     </div>
                                     <small class="text-muted">
                                         Miembros: {{ team.members?.length || 0 }}
@@ -127,14 +127,16 @@
                         <h6 class="mb-0 fw-bold">Citas de Mis Equipos</h6>
                         <div class="d-flex flex-wrap gap-2">
                             <select class="form-select form-select-sm" style="min-width: 180px;" v-model="statusFilter">
-                                <option value="">Todos los estados</option>
+                                <option value="">Citas Activas</option>
                                 <option value="solicitada">Solicitada</option>
                                 <option value="pendiente_cotizacion">Pendiente de Cotización</option>
                                 <option value="cotizada">Cotizada</option>
                                 <option value="aprobada">Aprobada</option>
+                                <option value="para_ejecucion">Para Ejecución</option>
                                 <option value="programada">Programada</option>
                                 <option value="ejecutada">Ejecutada</option>
                                 <option value="cancelada">Cancelada</option>
+                                <option value="historial">Historial (Canceladas y Ejecutadas)</option>
                             </select>
                         </div>
                     </div>
@@ -180,7 +182,7 @@
                                             <i class="bi bi-plus"></i>
                                         </button>
                                         <button
-                                            v-if="['solicitada', 'pendiente_cotizacion', 'aprobada', 'programada'].includes(apt.status)"
+                                            v-if="['solicitada', 'pendiente_cotizacion', 'aprobada', 'para_ejecucion', 'programada'].includes(apt.status)"
                                             class="btn btn-outline-danger"
                                             @click="cancelAppointment(apt)"
                                             title="Cancelar cita"
@@ -188,7 +190,7 @@
                                             <i class="bi bi-x-circle"></i>
                                         </button>
                                         <button
-                                            v-if="apt.status === 'programada'"
+                                            v-if="['para_ejecucion', 'programada'].includes(apt.status)"
                                             class="btn btn-outline-success"
                                             @click="markAsExecuted(apt)"
                                             :disabled="executingApts[apt.id]"
@@ -434,11 +436,12 @@ const {
 const showNotifications = ref(false);
 
 const stats = computed(() => {
-    const total = appointments.value.length;
-    const pending = appointments.value.filter((a) => (
+    const active = appointments.value.filter(a => !['cancelada', 'ejecutada'].includes(a.status));
+    const total = active.length;
+    const pending = active.filter((a) => (
         ['solicitada', 'pendiente_cotizacion'].includes(a.status) && !a.quotation
     )).length;
-    const scheduled = appointments.value.filter(a => a.status === 'programada').length;
+    const scheduled = active.filter(a => ['para_ejecucion', 'programada'].includes(a.status)).length;
     const members = new Set(teamMembers.value.map(m => m.id)).size;
 
     return {
@@ -464,7 +467,17 @@ const appointmentsByStatus = computed(() => {
 });
 
 const filteredAppointments = computed(() => {
-    if (!statusFilter.value) return appointments.value;
+    if (!statusFilter.value) {
+        // Por defecto: mostrar solo citas activas
+        return appointments.value.filter(a => !['cancelada', 'ejecutada'].includes(a.status));
+    }
+    
+    if (statusFilter.value === 'historial') {
+        // Mostrar solo historial (canceladas y ejecutadas)
+        return appointments.value.filter(a => ['cancelada', 'ejecutada'].includes(a.status));
+    }
+    
+    // Mostrar por estado específico
     return appointments.value.filter(a => a.status === statusFilter.value);
 });
 
@@ -593,6 +606,12 @@ const getMemberTeams = (member) => {
     return member.teams.map(t => t.name).join(', ');
 };
 
+const getTeamActiveCitasCount = (teamId) => {
+    return appointments.value.filter(a => 
+        a.team_id === teamId && !['cancelada', 'ejecutada'].includes(a.status)
+    ).length;
+};
+
 const formatDate = (date) => {
     if (!date) return '-';
     return new Date(date).toLocaleDateString('es-ES', {
@@ -611,6 +630,7 @@ const formatStatus = (status) => {
         'pendiente_aprobacion_admin': 'Pendiente Aprobación Admin',
         'cotizada': 'Cotizada',
         'aprobada': 'Aprobada',
+        'para_ejecucion': 'Para Ejecución',
         'programada': 'Programada',
         'ejecutada': 'Ejecutada',
         'rechazada': 'Rechazada',
@@ -626,6 +646,7 @@ const statusBadgeClass = (status) => {
         'pendiente_aprobacion_admin': 'text-bg-warning',
         'cotizada': 'text-bg-info',
         'aprobada': 'text-bg-primary',
+        'para_ejecucion': 'text-bg-success',
         'programada': 'text-bg-info',
         'ejecutada': 'text-bg-success',
         'rechazada': 'text-bg-danger',

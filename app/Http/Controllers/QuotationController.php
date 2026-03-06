@@ -112,6 +112,7 @@ class QuotationController extends Controller
             return response()->json(['error' => 'No autorizado'], 403);
         }
 
+        // Mantener status actual, el cambio a para_ejecucion se hace cuando se asigna precio
         $appointment->update(['status' => 'cotizada']);
 
         // Notificar al cliente que la cotizacion fue validada por admin y ya puede revisarla.
@@ -145,20 +146,27 @@ class QuotationController extends Controller
         $quotation = Quotation::with('appointment.client', 'appointment.team')->findOrFail($id);
         $user = Auth::user();
 
-        // Solo el líder del equipo o admin puede establecer precio
-        if ($user->role->name !== 'admin' && $quotation->appointment->team->leader_id !== $user->id) {
+        // Solo el admin puede establecer precio
+        if ($user->role->name !== 'admin') {
             return response()->json(['error' => 'No autorizado'], 403);
         }
 
         $quotation->update(['price' => $request->price]);
+        
+        // Actualizar la fecha programada de la cita y cambiar a para_ejecucion
+        $appointment = $quotation->appointment;
+        $appointment->update([
+            'scheduled_date' => $request->scheduled_date,
+            'appointment_type' => 'ejecucion',
+            'status' => 'para_ejecucion'
+        ]);
 
         // Cuando se asigna precio, la cotizacion ya se muestra al cliente para aprobar/rechazar.
-        $appointment = $quotation->appointment;
         Notification::create([
             'user_id' => $appointment->client_id,
             'type' => 'quotation_ready',
             'title' => 'Cotización lista para tu aprobación',
-            'message' => "Tu cotización ya tiene precio ({$quotation->price}) y está lista para que la apruebes o rechaces.",
+            'message' => "Tu cotización ya tiene precio (COP " . number_format($quotation->price, 0) . ") y está lista para que la apruebes o rechaces.",
             'data' => [
                 'appointment_id' => $appointment->id,
                 'quotation_id' => $quotation->id,
@@ -167,6 +175,7 @@ class QuotationController extends Controller
                 'labor_hours' => $quotation->labor_hours,
                 'required_staff' => $quotation->required_staff,
                 'price' => $quotation->price,
+                'scheduled_date' => $appointment->scheduled_date,
                 'priced_by' => $user->name,
             ]
         ]);
@@ -187,13 +196,10 @@ class QuotationController extends Controller
             return response()->json(['error' => 'La cotización aún no tiene precio asignado por administración'], 400);
         }
 
-        // marca la cotización como aprobada, el cambio de tipo de cita
-        // se realiza cuando se programa realmente la ejecución.
+        // marca la cotización como aprobada
+        // El status se mantiene en 'para_ejecucion' para que el técnico ejecute
         $quotation->update(['approved_at' => Carbon::now()]);
-        $appointment->update([
-            'status' => 'aprobada',
-            // mantiene appointment_type original (cotizacion)
-        ]);
+        // No cambiar el status, se mantiene en 'para_ejecucion'
 
         // Notificar al equipo que su cotización fue aprobada
         if ($appointment->team) {
@@ -220,7 +226,7 @@ class QuotationController extends Controller
             'user_id' => $appointment->client_id,
             'type' => 'quotation_approved_client',
             'title' => 'Cotización aprobada',
-            'message' => 'Has aprobado la cotización, ahora procede a programar la ejecución',
+            'message' => 'Has aprobado la cotización. El técnico procederá con la ejecución en la fecha programada.',
             'data' => [
                 'appointment_id' => $appointment->id
             ]
