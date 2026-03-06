@@ -14,7 +14,12 @@ class AuthController extends Controller
 {
     public function register(RegisterRequest $request)
     {
-        $user = User::create($request->validated());
+        // Siempre registra como cliente (rol ID 3)
+        // El admin puede cambiar roles después desde el panel
+        $data = $request->validated();
+        $data['id_rol'] = 3; // Cliente
+
+        $user = User::create($data);
 
         $token = $user->createToken('auth_token')->plainTextToken;
 
