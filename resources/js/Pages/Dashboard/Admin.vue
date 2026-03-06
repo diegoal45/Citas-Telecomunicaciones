@@ -24,54 +24,47 @@
 
             <!-- Métricas principales -->
             <div class="row g-3 mb-3">
-                <div class="col-6 col-lg-3">
-                    <div class="card border-0 shadow-sm h-100" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
-                        <div class="card-body text-white p-3">
+                <div class="col-md-4">
+                    <div class="card border-0 shadow-sm h-100 stats-card stats-card-primary">
+                        <div class="card-body p-3">
                             <div class="d-flex align-items-center justify-content-between">
                                 <div>
-                                    <div class="small opacity-75 mb-1">Usuarios</div>
-                                    <h3 class="mb-0 fw-bold">{{ metrics.totalUsers }}</h3>
+                                    <div class="text-muted small mb-1">Citas Activas</div>
+                                    <h2 class="mb-0 fw-bold" style="color: #0d6efd;">{{ metrics.totalUsers }}</h2>
                                 </div>
-                                <i class="bi bi-people-fill" style="font-size: 2rem; opacity: 0.5;"></i>
+                                <div class="stats-icon stats-icon-primary">
+                                    <i class="bi bi-calendar-check"></i>
+                                </div>
                             </div>
                         </div>
                     </div>
                 </div>
-                <div class="col-6 col-lg-3">
-                    <div class="card border-0 shadow-sm h-100" style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);">
-                        <div class="card-body text-white p-3">
+                <div class="col-md-4">
+                    <div class="card border-0 shadow-sm h-100 stats-card stats-card-success">
+                        <div class="card-body p-3">
                             <div class="d-flex align-items-center justify-content-between">
                                 <div>
-                                    <div class="small opacity-75 mb-1">Equipos</div>
-                                    <h3 class="mb-0 fw-bold">{{ metrics.totalTeams }}</h3>
+                                    <div class="text-muted small mb-1">Completadas</div>
+                                    <h2 class="mb-0 fw-bold" style="color: #198754;">{{ metrics.totalTeams }}</h2>
                                 </div>
-                                <i class="bi bi-diagram-3-fill" style="font-size: 2rem; opacity: 0.5;"></i>
+                                <div class="stats-icon stats-icon-success">
+                                    <i class="bi bi-check-circle"></i>
+                                </div>
                             </div>
                         </div>
                     </div>
                 </div>
-                <div class="col-6 col-lg-3">
-                    <div class="card border-0 shadow-sm h-100" style="background: linear-gradient(135deg, #ffecd2 0%, #fcb69f 100%);">
-                        <div class="card-body text-dark p-3">
+                <div class="col-md-4">
+                    <div class="card border-0 shadow-sm h-100 stats-card stats-card-warning">
+                        <div class="card-body p-3">
                             <div class="d-flex align-items-center justify-content-between">
                                 <div>
-                                    <div class="small opacity-75 mb-1">Por Atender</div>
-                                    <h3 class="mb-0 fw-bold">{{ metrics.pendingAttention }}</h3>
+                                    <div class="text-muted small mb-1">Canceladas</div>
+                                    <h2 class="mb-0 fw-bold" style="color: #6c757d;">{{ metrics.pendingAttention }}</h2>
                                 </div>
-                                <i class="bi bi-exclamation-triangle-fill" style="font-size: 2rem; opacity: 0.4;"></i>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                <div class="col-6 col-lg-3">
-                    <div class="card border-0 shadow-sm h-100" style="background: linear-gradient(135deg, #a8edea 0%, #fed6e3 100%);">
-                        <div class="card-body text-dark p-3">
-                            <div class="d-flex align-items-center justify-content-between">
-                                <div>
-                                    <div class="small opacity-75 mb-1">Programadas</div>
-                                    <h3 class="mb-0 fw-bold">{{ metrics.scheduledExecutions }}</h3>
+                                <div class="stats-icon stats-icon-warning">
+                                    <i class="bi bi-x-circle"></i>
                                 </div>
-                                <i class="bi bi-calendar-check-fill" style="font-size: 2rem; opacity: 0.4;"></i>
                             </div>
                         </div>
                     </div>
@@ -194,7 +187,7 @@
                                 <th>Cliente</th>
                                 <th>Tipo</th>
                                 <th>Estado</th>
-                                <th>Fecha</th>
+                                <th>Fecha Programada</th>
                                 <th>Equipo</th>
                                 <th>Cotización</th>
                                 <th>Precio</th>
@@ -261,7 +254,7 @@
                                 <th>Cliente</th>
                                 <th>Tipo</th>
                                 <th>Estado</th>
-                                <th>Fecha</th>
+                                <th>Fecha Programada</th>
                                 <th>Equipo</th>
                             </tr>
                         </thead>
@@ -457,6 +450,8 @@
             :allow-mark-all="true"
             :unread-count="unreadNotifications"
             :marking-all-read="markingAllRead"
+            :show-time="true"
+            :format-time="formatNotificationTime"
             @close="showNotifications = false"
             @mark-one="markAsRead"
             @mark-all="markAllAsRead"
@@ -1441,6 +1436,22 @@ const shortenText = (value, max = 60) => {
     return `${text.slice(0, max)}...`;
 };
 
+const formatNotificationTime = (date) => {
+    if (!date) return '';
+    const d = new Date(date);
+    const now = new Date();
+    const diff = now - d;
+    const minutes = Math.floor(diff / 60000);
+    const hours = Math.floor(minutes / 60);
+    const days = Math.floor(hours / 24);
+    
+    if (minutes < 1) return 'Ahora';
+    if (minutes < 60) return `Hace ${minutes}m`;
+    if (hours < 24) return `Hace ${hours}h`;
+    if (days < 7) return `Hace ${days}d`;
+    return d.toLocaleDateString('es-ES', { month: 'short', day: 'numeric' });
+};
+
 onMounted(() => {
     loadData();
     startPolling(30000);
@@ -1450,8 +1461,80 @@ onMounted(() => {
 <style scoped>
 .dashboard-container {
     min-height: 100vh;
+    background: #f8f9fa;
+}
+
+.stats-card {
+    transition: all 0.3s ease;
+    position: relative;
+    overflow: hidden;
+}
+
+.stats-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0) 0%, rgba(255, 255, 255, 0.1) 100%);
+    opacity: 0;
+    transition: opacity 0.3s ease;
+}
+
+.stats-card:hover::before {
+    opacity: 1;
+}
+
+.stats-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 0.75rem 1.5rem rgba(0, 0, 0, 0.15) !important;
+}
+
+.stats-card-primary {
+    background: linear-gradient(135deg, #ffffff 0%, #f0f5ff 100%);
+    border-left: 4px solid #0d6efd;
+}
+
+.stats-card-success {
+    background: linear-gradient(135deg, #ffffff 0%, #f0fdf4 100%);
+    border-left: 4px solid #198754;
+}
+
+.stats-card-warning {
+    background: linear-gradient(135deg, #ffffff 0%, #fffbf0 100%);
+    border-left: 4px solid #ffc107;
+}
+
+.stats-icon {
+    width: 56px;
+    height: 56px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.75rem;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    transition: transform 0.3s ease;
+}
+
+.stats-card:hover .stats-icon {
+    transform: scale(1.1) rotate(5deg);
+}
+
+.stats-icon-primary {
     background: linear-gradient(135deg, #0d6efd 0%, #0a58ca 100%);
-    background-attachment: fixed;
+    color: white;
+}
+
+.stats-icon-success {
+    background: linear-gradient(135deg, #198754 0%, #146c43 100%);
+    color: white;
+}
+
+.stats-icon-warning {
+    background: linear-gradient(135deg, #ffc107 0%, #ffb300 100%);
+    color: white;
 }
 
 .card {

@@ -28,7 +28,7 @@
                             <a href="/profile" class="dropdown-item">
                                 <i class="bi bi-person-circle me-2"></i>Mi Perfil
                             </a>
-                            <a href="#" class="dropdown-item disabled" aria-disabled="true">
+                            <a href="/settings" class="dropdown-item">
                                 <i class="bi bi-gear me-2"></i>Configuracion
                             </a>
                             <hr class="dropdown-divider my-1">

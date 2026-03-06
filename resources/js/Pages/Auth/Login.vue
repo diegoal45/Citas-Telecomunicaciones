@@ -126,6 +126,8 @@ const handleLogin = async () => {
             window.location.href = '/admin/dashboard';
         } else if (roleName === 'tecnico_lider') {
             window.location.href = '/tecnico/dashboard';
+        } else if (roleName === 'tecnico') {
+            window.location.href = '/technician/dashboard';
         } else {
             window.location.href = '/dashboard/client';
         }

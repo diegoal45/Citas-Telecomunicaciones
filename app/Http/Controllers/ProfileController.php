@@ -4,9 +4,39 @@ namespace App\Http\Controllers;
 
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\Hash;
+use Illuminate\Validation\ValidationException;
 
 class ProfileController extends Controller
 {
+    public function show()
+    {
+        $user = Auth::user();
+        return response()->json([
+            'user' => $user->load('role')
+        ]);
+    }
+
+    public function update()
+    {
+        $request = request();
+        $user = Auth::user();
+
+        $data = $request->validate([
+            'name' => 'required|string|max:255',
+            'email' => 'required|email|unique:users,email,' . $user->id,
+            'phone' => 'nullable|string|max:20',
+            'address' => 'nullable|string|max:255'
+        ]);
+
+        $user->update($data);
+
+        return response()->json([
+            'message' => 'Perfil actualizado correctamente',
+            'user' => $user->load('role')
+        ]);
+    }
+
     public function uploadPhoto()
     {
         $request = request();
@@ -43,6 +73,31 @@ class ProfileController extends Controller
 
         return response()->json([
             'photo_url' => Storage::disk('public')->url($user->profile_photo_path)
+        ]);
+    }
+
+    public function updatePassword()
+    {
+        $request = request();
+        $user = Auth::user();
+
+        $request->validate([
+            'current_password' => 'required',
+            'password' => 'required|string|min:8|confirmed',
+        ]);
+
+        if (!Hash::check($request->current_password, $user->password)) {
+            throw ValidationException::withMessages([
+                'current_password' => 'La contraseña actual es incorrecta'
+            ]);
+        }
+
+        $user->update([
+            'password' => Hash::make($request->password)
+        ]);
+
+        return response()->json([
+            'message' => 'Contraseña actualizada correctamente'
         ]);
     }
 }

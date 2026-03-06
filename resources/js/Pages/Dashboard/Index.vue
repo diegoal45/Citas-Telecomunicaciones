@@ -6,10 +6,14 @@
         <NotificationPanel
             :show="showNotifications"
             :notifications="notifications"
+            :allow-mark-all="true"
+            :unread-count="unreadNotifications"
+            :marking-all-read="markingAllRead"
             :show-time="true"
             :format-time="formatNotificationTime"
             @close="showNotifications = false"
             @mark-one="markAsRead"
+            @mark-all="markAllAsRead"
         />
 
         <!-- Contenido Principal -->
@@ -392,9 +396,11 @@ const {
     notifications,
     showNotifications,
     unreadNotifications,
+    markingAllRead,
     loadNotifications,
     toggleNotifications,
     markAsRead,
+    markAllAsRead,
     startPolling,
 } = useNotifications({
     autoCloseOnMark: false,
@@ -662,8 +668,7 @@ onMounted(() => {
 
 .dashboard-container {
     min-height: 100vh;
-    background: linear-gradient(135deg, #0d6efd 0%, #0a58ca 100%);
-    background-attachment: fixed;
+    background: #f8f9fa;
 }
 
 /* Navbar Moderno */
@@ -838,11 +843,11 @@ onMounted(() => {
 
 .welcome-text h1 {
     font-size: 2rem;
-    color: white;
+    color: #1a1a1a;
 }
 
 .welcome-text p {
-    color: rgba(255, 255, 255, 0.9);
+    color: #6c757d;
     font-size: 1rem;
 }
 
