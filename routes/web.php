@@ -21,3 +21,11 @@ Route::get('/register', function () {
 Route::get('/dashboard', function () {
     return Inertia::render('Dashboard/Index');
 })->name('dashboard');
+
+Route::get('/admin/dashboard', function () {
+    return Inertia::render('Dashboard/Admin');
+})->name('dashboard.admin');
+
+Route::get('/appointments/create', function () {
+    return Inertia::render('Appointments/Create');
+})->name('appointments.create');

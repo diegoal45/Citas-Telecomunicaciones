@@ -8,7 +8,7 @@
                             <!-- Logo/Título -->
                             <div class="text-center mb-4">
                                 <h2 class="fw-bold text-primary">Bienvenido</h2>
-                                <p class="text-muted">Citas Telecomunicaciones</p>
+                                <p class="text-muted">ExCitel</p>
                             </div>
 
                             <!-- Mensaje de error -->
@@ -84,7 +84,7 @@
 
                     <!-- Footer -->
                     <div class="text-center mt-3">
-                        <small class="text-muted">© 2026 Citas Telecomunicaciones</small>
+                        <small class="text-muted">© 2026 ExCitel</small>
                     </div>
                 </div>
             </div>
@@ -94,7 +94,8 @@
 
 <script setup>
 import { ref } from 'vue';
-import axios from 'axios';
+import api from '../../services/api';
+import { saveAuthSession } from '../../services/auth';
 
 const form = ref({
     email: '',
@@ -112,19 +113,20 @@ const handleLogin = async () => {
     errorMessage.value = '';
 
     try {
-        const response = await axios.post('/api/login', {
+        const response = await api.post('/api/login', {
             email: form.value.email,
             password: form.value.password,
         });
 
-        // Guardar token en localStorage
-        if (response.data.token) {
-            localStorage.setItem('auth_token', response.data.token);
-            localStorage.setItem('user', JSON.stringify(response.data.user));
-        }
+        saveAuthSession(response.data);
 
-        // Redirigir al dashboard
-        window.location.href = '/dashboard';
+        // Redirigir segun rol
+        const roleName = response.data?.user?.role?.name;
+        if (roleName === 'admin') {
+            window.location.href = '/admin/dashboard';
+        } else {
+            window.location.href = '/dashboard';
+        }
         
     } catch (error) {
         loading.value = false;

@@ -105,6 +105,25 @@ class AppointmentController extends Controller
             ]
         ]);
 
+        // Notificar a todos los administradores sobre nueva solicitud
+        $admins = User::whereHas('role', function ($query) {
+            $query->where('name', 'admin');
+        })->get();
+
+        foreach ($admins as $admin) {
+            Notification::create([
+                'user_id' => $admin->id,
+                'type' => 'admin_new_appointment',
+                'title' => 'Nueva cita solicitada',
+                'message' => "El cliente {$appointment->client->name} solicitó una nueva cita.",
+                'data' => [
+                    'appointment_id' => $appointment->id,
+                    'client_id' => $appointment->client_id,
+                    'scheduled_date' => $appointment->scheduled_date,
+                ]
+            ]);
+        }
+
         return response()->json($appointment->load('team'), 201);
     }
 

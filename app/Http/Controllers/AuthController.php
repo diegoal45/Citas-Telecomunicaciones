@@ -14,12 +14,13 @@ class AuthController extends Controller
 {
     public function register(RegisterRequest $request)
     {
-        // Siempre registra como cliente (rol ID 3)
+        // Siempre registra como user/cliente (rol ID 4)
         // El admin puede cambiar roles después desde el panel
         $data = $request->validated();
-        $data['id_rol'] = 3; // Cliente
+        $data['id_rol'] = 4; // User/Cliente
 
         $user = User::create($data);
+        // Nota: La notificación de bienvenida se crea automáticamente via UserObserver
 
         $token = $user->createToken('auth_token')->plainTextToken;
 

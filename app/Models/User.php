@@ -17,12 +17,17 @@ class User extends Authenticatable
         'email',
         'password',
         'phone',
-        'id_rol'
+        'id_rol',
+        'profile_photo_path'
     ];
 
     protected $hidden = [
         'password',
         'remember_token',
+    ];
+
+    protected $appends = [
+        'profile_photo_url'
     ];
 
     protected function casts(): array
@@ -31,6 +36,16 @@ class User extends Authenticatable
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
         ];
+    }
+
+    // Accessor para la URL de la foto de perfil
+    public function getProfilePhotoUrlAttribute()
+    {
+        if (!$this->profile_photo_path) {
+            return null;
+        }
+
+        return asset('storage/' . $this->profile_photo_path);
     }
 
     // Relaciones

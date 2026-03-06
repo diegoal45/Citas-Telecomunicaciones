@@ -7,7 +7,7 @@
                         <div class="card-body p-4 p-md-5">
                             <div class="text-center mb-4">
                                 <h2 class="fw-bold text-primary">Crear Cuenta</h2>
-                                <p class="text-muted mb-0">Comienza a usar Citas Telecomunicaciones</p>
+                                <p class="text-muted mb-0">Comienza a usar ExCitel</p>
                             </div>
 
                             <div v-if="errorMessage" class="alert alert-danger" role="alert">
@@ -28,8 +28,8 @@
                                 </div>
 
                                 <div class="mb-3">
-                                    <label for="phone" class="form-label">Telefono (opcional)</label>
-                                    <input id="phone" v-model="form.phone" type="text" class="form-control" :class="{ 'is-invalid': errors.phone }">
+                                    <label for="phone" class="form-label">Teléfono</label>
+                                    <input id="phone" v-model="form.phone" type="text" class="form-control" :class="{ 'is-invalid': errors.phone }" required>
                                     <div v-if="errors.phone" class="invalid-feedback">{{ errors.phone }}</div>
                                 </div>
 
@@ -64,7 +64,8 @@
 
 <script setup>
 import { ref } from 'vue';
-import axios from 'axios';
+import api from '../../services/api';
+import { saveAuthSession } from '../../services/auth';
 
 const form = ref({
     name: '',
@@ -84,12 +85,9 @@ const handleRegister = async () => {
     errorMessage.value = '';
 
     try {
-        const response = await axios.post('/api/register', form.value);
+        const response = await api.post('/api/register', form.value);
 
-        if (response.data.token) {
-            localStorage.setItem('auth_token', response.data.token);
-            localStorage.setItem('user', JSON.stringify(response.data.user));
-        }
+        saveAuthSession(response.data);
 
         window.location.href = '/dashboard';
     } catch (error) {

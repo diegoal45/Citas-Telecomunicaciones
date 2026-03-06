@@ -17,7 +17,7 @@ class RegisterRequest extends FormRequest
             'name' => 'required|string|max:255',
             'email' => 'required|string|email|max:255|unique:users',
             'password' => 'required|string|min:8|confirmed',
-            'phone' => 'nullable|string|max:20|unique:users'
+            'phone' => 'required|string|max:20|unique:users'
         ];
     }
 
@@ -28,6 +28,7 @@ class RegisterRequest extends FormRequest
             'email.required' => 'El email es obligatorio',
             'email.email' => 'El email no es valido',
             'email.unique' => 'El email ya está registrado',
+            'phone.required' => 'El teléfono es obligatorio',
             'phone.unique' => 'El teléfono ya está registrado',
             'phone.max' => 'El teléfono excede la longitud máxima permitida',
             'password.required' => 'La contraseña es obligatoria',
