@@ -1,8 +1,9 @@
 <template>
     <AppLayout brand-href="/dashboard" brand-label="Mi Perfil" brand-icon="bi bi-person-circle" page-class="profile-page">
-        <main class="container py-4">
+        <main class="container-fluid px-3 px-md-4 py-4">
             <div class="row">
-                <div class="col-12 col-md-8 mx-auto">
+                <!-- COLUMNA IZQUIERDA - Info del Perfil -->
+                <div class="col-12 col-lg-8">
                     <!-- TARJETA DE PERFIL -->
                     <div class="card border-0 shadow mb-4">
                         <div class="card-header bg-gradient-primary text-white border-0 py-3">
@@ -86,16 +87,6 @@
                                     </div>
                                 </div>
 
-                                <div class="mb-3">
-                                    <label for="address" class="form-label fw-bold">Dirección</label>
-                                    <input
-                                        id="address"
-                                        v-model="form.address"
-                                        type="text"
-                                        class="form-control"
-                                    >
-                                </div>
-
                                 <div v-if="error" class="alert alert-danger mb-3">{{ error }}</div>
                                 <div v-if="success" class="alert alert-success mb-3">{{ success }}</div>
 
@@ -104,7 +95,7 @@
                                         <span v-if="loading" class="spinner-border spinner-border-sm me-2"></span>
                                         {{ loading ? 'Guardando...' : 'Guardar Cambios' }}
                                     </button>
-                                    <a href="/dashboard" class="btn btn-secondary">Cancelar</a>
+                                    <a href="/dashboard" class="btn btn-secondary">Volver</a>
                                 </div>
                             </form>
                         </div>
@@ -164,13 +155,76 @@
                         </div>
                     </div>
                 </div>
+
+                <!-- COLUMNA DERECHA - Resumen Rápido -->
+                <div class="col-12 col-lg-4">
+                    <!-- ESTADÍSTICAS RÁPIDAS -->
+                    <div class="card border-0 shadow mb-4">
+                        <div class="card-header bg-gradient-info text-white border-0 py-3">
+                            <h6 class="mb-0 fw-semibold">
+                                <i class="bi bi-bar-chart me-2"></i>Mis Estadísticas
+                            </h6>
+                        </div>
+                        <div class="card-body p-3">
+                            <div class="mb-3">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <span class="text-muted small">Citas Activas</span>
+                                    <span class="badge text-bg-primary">{{ stats.activeAppointments }}</span>
+                                </div>
+                            </div>
+                            <div class="mb-3">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <span class="text-muted small">Citas Completadas</span>
+                                    <span class="badge text-bg-success">{{ stats.completedAppointments }}</span>
+                                </div>
+                            </div>
+                            <div class="mb-3">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <span class="text-muted small">Cotizaciones Pendientes</span>
+                                    <span class="badge text-bg-warning">{{ stats.pendingQuotations }}</span>
+                                </div>
+                            </div>
+                            <div class="mb-0">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <span class="text-muted small">Citas Canceladas</span>
+                                    <span class="badge text-bg-secondary">{{ stats.cancelledAppointments }}</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- INFORMACIÓN DEL CUENTA -->
+                    <div class="card border-0 shadow">
+                        <div class="card-header bg-gradient-success text-white border-0 py-3">
+                            <h6 class="mb-0 fw-semibold">
+                                <i class="bi bi-info-circle me-2"></i>Información de Cuenta
+                            </h6>
+                        </div>
+                        <div class="card-body p-3">
+                            <ul class="list-group list-group-flush">
+                                <li class="list-group-item d-flex justify-content-between px-0 py-2">
+                                    <span class="text-muted small">Miembro desde</span>
+                                    <span class="small fw-semibold">{{ formatDate(user.created_at) }}</span>
+                                </li>
+                                <li class="list-group-item d-flex justify-content-between px-0 py-2">
+                                    <span class="text-muted small">Último acceso</span>
+                                    <span class="small fw-semibold">{{ formatDate(user.updated_at) }}</span>
+                                </li>
+                                <li class="list-group-item d-flex justify-content-between px-0 py-2">
+                                    <span class="text-muted small">Estado</span>
+                                    <span class="badge text-bg-success">Activo</span>
+                                </li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
             </div>
         </main>
     </AppLayout>
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue';
+import { ref, onMounted, computed } from 'vue';
 import AppLayout from '../../Layouts/AppLayout.vue';
 import api from '../../services/api';
 import { getStoredUser } from '../../services/auth';
@@ -183,18 +237,32 @@ const error = ref('');
 const success = ref('');
 const passwordError = ref('');
 const passwordSuccess = ref('');
+const appointments = ref([]);
 
 const form = ref({
     name: user.value.name || '',
     email: user.value.email || '',
-    phone: user.value.phone || '',
-    address: user.value.address || ''
+    phone: user.value.phone || ''
 });
 
 const passwordForm = ref({
     current_password: '',
     password: '',
     password_confirmation: ''
+});
+
+const stats = computed(() => {
+    const active = appointments.value.filter(a => !['cancelada', 'ejecutada'].includes(a.status));
+    const completed = appointments.value.filter(a => a.status === 'ejecutada');
+    const cancelled = appointments.value.filter(a => a.status === 'cancelada');
+    const pending = appointments.value.filter(a => ['solicitada', 'pendiente_cotizacion'].includes(a.status) && !a.quotation);
+    
+    return {
+        activeAppointments: active.length,
+        completedAppointments: completed.length,
+        cancelledAppointments: cancelled.length,
+        pendingQuotations: pending.length
+    };
 });
 
 const handlePhotoUpload = async (event) => {
@@ -279,7 +347,25 @@ const updatePassword = async () => {
     }
 };
 
-onMounted(() => {
+const formatDate = (date) => {
+    if (!date) return '-';
+    return new Date(date).toLocaleDateString('es-ES', {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric'
+    });
+};
+
+const loadStats = async () => {
+    try {
+        const response = await api.get('/api/appointments');
+        appointments.value = response.data.appointments || response.data.data || [];
+    } catch (err) {
+        console.error('Error al cargar estadísticas:', err);
+    }
+};
+
+onMounted(async () => {
     // Cargar datos del usuario actual
     const storedUser = getStoredUser();
     if (storedUser) {
@@ -287,10 +373,12 @@ onMounted(() => {
         form.value = {
             name: storedUser.name || '',
             email: storedUser.email || '',
-            phone: storedUser.phone || '',
-            address: storedUser.address || ''
+            phone: storedUser.phone || ''
         };
     }
+    
+    // Cargar estadísticas
+    await loadStats();
 });
 </script>
 
@@ -305,5 +393,13 @@ onMounted(() => {
 
 .bg-gradient-warning {
     background: linear-gradient(135deg, #ffc107 0%, #e0a800 100%);
+}
+
+.bg-gradient-info {
+    background: linear-gradient(135deg, #0dcaf0 0%, #0aa2c0 100%);
+}
+
+.bg-gradient-success {
+    background: linear-gradient(135deg, #198754 0%, #155e3b 100%);
 }
 </style>

@@ -35,5 +35,5 @@ Route::get('/profile', function () {
 })->name('profile.edit');
 
 Route::get('/settings', function () {
-    return Inertia::render('Settings/Index');
+    return redirect('/profile');
 })->name('settings.index');

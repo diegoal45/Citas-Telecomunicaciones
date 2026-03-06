@@ -3,7 +3,6 @@
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\ProfileController;
-use App\Http\Controllers\SettingsController;
 use App\Http\Controllers\RoleController;
 use App\Http\Controllers\TeamController;
 use App\Http\Controllers\AppointmentController;
@@ -29,18 +28,11 @@ Route::middleware('auth:sanctum')->group(function () {
     // =======================================
     Route::post('/logout', [AuthController::class, 'logout']);
     Route::get('/user', [AuthController::class, 'user']);
-    Route::put('/profile', [AuthController::class, 'updateProfile']);
     Route::post('/profile/photo', [ProfileController::class, 'uploadPhoto']);
     Route::get('/profile/photo', [ProfileController::class, 'getPhoto']);
     Route::get('/profile', [ProfileController::class, 'show']);
     Route::put('/profile', [ProfileController::class, 'update']);
     Route::post('/profile/password', [ProfileController::class, 'updatePassword']);
-    
-    // =======================================
-    // CONFIGURACIÓN
-    // =======================================
-    Route::get('/settings', [SettingsController::class, 'show']);
-    Route::post('/settings', [SettingsController::class, 'update']);
     
     // =======================================
     // ROLES
