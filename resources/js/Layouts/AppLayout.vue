@@ -2,7 +2,7 @@
     <div class="app-shell min-vh-100" :class="pageClass">
         <nav class="navbar navbar-expand-lg navbar-dark bg-primary shadow-sm sticky-top">
             <div class="container-fluid px-3 px-md-4">
-                <a class="navbar-brand fw-bold" :href="brandHref">
+                <a class="navbar-brand fw-bold cursor-pointer" @click.prevent="navigateToHome" style="cursor: pointer;">
                     <i :class="`${brandIcon} me-2`"></i>{{ brandLabel }}
                 </a>
 
@@ -25,12 +25,12 @@
                         </button>
 
                         <div class="user-dropdown" :class="{ show: menuOpen }">
-                            <a href="/profile" class="dropdown-item">
+                            <button @click="router.visit('/profile')" class="dropdown-item" style="background: none; border: none; cursor: pointer; text-align: left; width: 100%;">
                                 <i class="bi bi-person-circle me-2"></i>Mi Perfil
-                            </a>
-                            <a href="/settings" class="dropdown-item">
+                            </button>
+                            <button @click="router.visit('/settings')" class="dropdown-item" style="background: none; border: none; cursor: pointer; text-align: left; width: 100%;">
                                 <i class="bi bi-gear me-2"></i>Configuracion
-                            </a>
+                            </button>
                             <hr class="dropdown-divider my-1">
                             <button class="dropdown-item text-danger" @click="handleLogout">
                                 <i class="bi bi-box-arrow-right me-2"></i>Cerrar sesion
@@ -47,6 +47,7 @@
 
 <script setup>
 import { computed, ref } from 'vue';
+import { Link, router } from '@inertiajs/vue3';
 import api from '../services/api';
 import { clearAuthSession, getStoredUser } from '../services/auth';
 
@@ -90,6 +91,11 @@ const displayUser = computed(() => {
 
 const toggleMenu = () => {
     menuOpen.value = !menuOpen.value;
+};
+
+const navigateToHome = () => {
+    // Usar Inertia para navegar manteniendo el estado de la SPA
+    router.visit(props.brandHref);
 };
 
 const handleLogout = async () => {

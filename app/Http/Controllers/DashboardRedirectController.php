@@ -9,22 +9,9 @@ class DashboardRedirectController extends Controller
 {
     public function index()
     {
-        // Redirigir según el rol del usuario autenticado
-        if (Auth::check()) {
-            $roleName = Auth::user()->role->name ?? null;
-            
-            if ($roleName === 'admin') {
-                return redirect('/admin/dashboard');
-            } elseif ($roleName === 'tecnico_lider') {
-                return redirect('/tecnico/dashboard');
-            } elseif ($roleName === 'tecnico') {
-                return redirect('/technician/dashboard');
-            } else {
-                return redirect('/dashboard/client');
-            }
-        }
-        
-        return redirect('/login');
+        // No redirecionar en el servidor - dejar que el frontend maneje esto
+        // El frontend tiene el token y sabe a qué dashboard ir según el rol
+        return Inertia::render('Dashboard/Index');
     }
 
     public function client()

@@ -29,7 +29,7 @@ Route::get('/appointments/create', function () {
     return Inertia::render('Appointments/Create');
 })->name('appointments.create');
 
-// Rutas de perfil y configuración
+// Rutas de perfil y configuración (accesibles sin middleware especifico, el frontend maneja auth)
 Route::get('/profile', function () {
     return Inertia::render('Profile/Edit');
 })->name('profile.edit');

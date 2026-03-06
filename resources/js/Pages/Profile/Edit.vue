@@ -279,14 +279,22 @@ const handlePhotoUpload = async (event) => {
                 'Content-Type': 'multipart/form-data'
             }
         });
-        user.value.profile_photo_url = response.data.profile_photo_url;
-        uploadMessage.value = 'Foto actualizada correctamente';
+        
+        // Actualizar la URL de la foto
+        const photoUrl = response.data.profile_photo_url || `/storage/${response.data.profile_photo_path}`;
+        user.value.profile_photo_url = photoUrl;
+        user.value.profile_photo_path = response.data.profile_photo_path;
+        
+        // Guardar en localStorage
+        localStorage.setItem('user', JSON.stringify(user.value));
+        
+        uploadMessage.value = 'Foto actualizada correctamente ✅';
         setTimeout(() => {
             uploadMessage.value = '';
         }, 3000);
     } catch (err) {
         uploadMessage.value = 'Error al subir la foto';
-        console.error(err);
+        console.error('Error uploading photo:', err);
     }
 };
 
@@ -358,23 +366,57 @@ const formatDate = (date) => {
 
 const loadStats = async () => {
     try {
-        const response = await api.get('/api/appointments');
-        appointments.value = response.data.appointments || response.data.data || [];
+        // Intentar obtener datos según el endpoint disponible
+        let appointmentsData = [];
+        
+        // Si el usuario es tech leader, usar su endpoint
+        if (user.value.role?.name === 'tech_leader') {
+            const response = await api.get('/api/tecnico/dashboard');
+            appointmentsData = response.data.appointments || [];
+        } else if (user.value.role?.name === 'client') {
+            // Si es cliente, usar otro endpoint si existe
+            const response = await api.get('/api/appointments');
+            appointmentsData = response.data.data || [];
+        }
+        
+        appointments.value = appointmentsData;
     } catch (err) {
-        console.error('Error al cargar estadísticas:', err);
+        console.log('No se pudo cargar estadísticas, continuando sin ellas');
     }
 };
 
 onMounted(async () => {
-    // Cargar datos del usuario actual
-    const storedUser = getStoredUser();
-    if (storedUser) {
-        user.value = storedUser;
+    // Cargar datos del usuario actual desde el servidor
+    try {
+        const response = await api.get('/api/profile');
+        user.value = response.data.user;
+        
+        // Agregar URL de foto si existe
+        if (user.value.profile_photo_path) {
+            user.value.profile_photo_url = `/storage/${user.value.profile_photo_path}`;
+        }
+        
+        // Actualizar form con datos del servidor
         form.value = {
-            name: storedUser.name || '',
-            email: storedUser.email || '',
-            phone: storedUser.phone || ''
+            name: user.value.name || '',
+            email: user.value.email || '',
+            phone: user.value.phone || ''
         };
+        
+        // Guardar en localStorage
+        localStorage.setItem('user', JSON.stringify(user.value));
+    } catch (err) {
+        console.log('No se pudo cargar el perfil desde el servidor');
+        // Usar datos locales si falla
+        const storedUser = getStoredUser();
+        if (storedUser) {
+            user.value = storedUser;
+            form.value = {
+                name: storedUser.name || '',
+                email: storedUser.email || '',
+                phone: storedUser.phone || ''
+            };
+        }
     }
     
     // Cargar estadísticas
