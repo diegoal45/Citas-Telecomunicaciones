@@ -32,6 +32,19 @@ class QuotationController extends Controller
             return response()->json(['error' => 'No eres el líder del equipo asignado a esta cita'], 403);
         }
 
+        // Validar que la cotización se hace dentro del horario de la cita
+        $appointmentDate = Carbon::parse($appointment->scheduled_date);
+        $now = Carbon::now();
+        $appointmentEndTime = $appointmentDate->copy()->addMinutes($appointment->duration_minutes);
+
+        if ($now->isBefore($appointmentDate) || $now->isAfter($appointmentEndTime)) {
+            return response()->json([
+                'error' => 'La cotización solo puede realizarse dentro del horario programado para la cita (' . 
+                $appointmentDate->format('d/m/Y H:i') . ' - ' . 
+                $appointmentEndTime->format('H:i') . ')'
+            ], 400);
+        }
+
         $quotation = Quotation::updateOrCreate(
             ['appointment_id' => $request->appointment_id],
             $request->validated()
@@ -298,6 +311,17 @@ class QuotationController extends Controller
         // sólo se puede programar si la cotización ya fue aprobada
         if (is_null($quotation->approved_at)) {
             return response()->json(['error' => 'La cotización debe estar aprobada antes de programar la ejecución'], 400);
+        }
+
+        // Validar que la ejecución sea posterior a la fecha de cotización
+        $quotationDate = Carbon::parse($appointment->scheduled_date);
+        $executionDate = Carbon::parse($request->scheduled_date);
+
+        if ($executionDate->isSameOrBefore($quotationDate)) {
+            return response()->json([
+                'error' => 'La ejecución debe programarse para una fecha posterior a la cotización (' . 
+                $quotationDate->format('d/m/Y H:i') . ')'
+            ], 400);
         }
 
         // actualiza la cita original en lugar de crear una nueva, de modo que

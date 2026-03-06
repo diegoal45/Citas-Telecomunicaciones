@@ -81,6 +81,7 @@ class AppointmentController extends Controller
             'appointment_type' => 'cotizacion',
             'status' => 'solicitada',
             'scheduled_date' => $scheduledDate,
+            'duration_minutes' => 60,
             'address' => $request->address,
             'description' => $request->description
         ]);
