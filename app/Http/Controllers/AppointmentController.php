@@ -11,6 +11,7 @@ use App\Http\Requests\CancelAppointmentRequest;
 use App\Http\Requests\RescheduleRequest;
 use Illuminate\Support\Facades\Auth;
 use Carbon\Carbon;
+use Barryvdh\DomPDF\Facade\Pdf;
 
 class AppointmentController extends Controller
 {
@@ -546,5 +547,32 @@ class AppointmentController extends Controller
         }
 
         return response()->json(['message' => 'Cita marcada como ejecutada']);
+    }
+
+    public function downloadPdf($id)
+    {
+        $appointment = Appointment::with([
+            'client',
+            'team.leader',
+            'team.members',
+            'quotation'
+        ])->findOrFail($id);
+
+        // Solo admin puede descargar PDFs
+        $user = Auth::user();
+        if ($user->role->name !== 'admin') {
+            return response()->json(['error' => 'No autorizado'], 403);
+        }
+
+        // Solo para citas ejecutadas
+        if ($appointment->status !== 'ejecutada') {
+            return response()->json(['error' => 'Solo se pueden descargar PDFs de citas ejecutadas'], 400);
+        }
+
+        $pdf = Pdf::loadView('pdf.appointment', [
+            'appointment' => $appointment
+        ]);
+
+        return $pdf->download("cita-{$appointment->id}-{$appointment->client->name}.pdf");
     }
 }

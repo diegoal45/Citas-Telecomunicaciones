@@ -63,6 +63,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/appointments/{id}/reschedule', [AppointmentController::class, 'reschedule']);
     Route::post('/appointments/{id}/assign-team', [AppointmentController::class, 'assignTeam']);
     Route::post('/appointments/{id}/mark-cotizada', [AppointmentController::class, 'markAsCotizada']);
+        Route::get('/appointments/{id}/pdf', [AppointmentController::class, 'downloadPdf']);
     
     // =======================================
     // COTIZACIONES

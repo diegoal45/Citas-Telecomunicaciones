@@ -256,6 +256,7 @@
                                 <th>Estado</th>
                                 <th>Fecha Programada</th>
                                 <th>Equipo</th>
+                                    <th>Acciones</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -265,9 +266,20 @@
                                 <td><span class="badge" :class="statusBadgeClass(apt.status)">{{ formatStatus(apt.status) }}</span></td>
                                 <td class="small">{{ formatDate(apt.scheduled_date) }}</td>
                                 <td class="small">{{ apt.teamName || 'Sin equipo' }}</td>
+                                    <td>
+                                        <button 
+                                            v-if="apt.status === 'ejecutada'" 
+                                            class="btn btn-sm btn-outline-danger"
+                                            @click="downloadPdf(apt.id)"
+                                            title="Descargar PDF"
+                                        >
+                                            <i class="bi bi-file-pdf me-1"></i>PDF
+                                        </button>
+                                        <span v-else class="text-muted small">-</span>
+                                    </td>
                             </tr>
                             <tr v-if="normalQueue.length === 0">
-                                <td colspan="5" class="text-center text-muted py-4">No hay citas</td>
+                                  <td colspan="6" class="text-center text-muted py-4">No hay citas</td>
                             </tr>
                         </tbody>
                     </table>
@@ -1435,6 +1447,26 @@ const shortenText = (value, max = 60) => {
     if (text.length <= max) return text;
     return `${text.slice(0, max)}...`;
 };
+
+    const downloadPdf = async (appointmentId) => {
+        try {
+            const response = await api.get(`/api/appointments/${appointmentId}/pdf`, {
+                responseType: 'blob'
+            });
+        
+            const url = window.URL.createObjectURL(new Blob([response.data]));
+            const link = document.createElement('a');
+            link.href = url;
+            link.setAttribute('download', `cita-${appointmentId}.pdf`);
+            document.body.appendChild(link);
+            link.click();
+            link.remove();
+            window.URL.revokeObjectURL(url);
+        } catch (err) {
+            console.error('Error al descargar PDF:', err);
+            alert('Error al descargar el PDF. Por favor intenta de nuevo.');
+        }
+    };
 
 const formatNotificationTime = (date) => {
     if (!date) return '';
