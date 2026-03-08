@@ -789,7 +789,7 @@ const cancelAppointment = async (appointment) => {
 
         await loadData();
     } catch (err) {
-        error.value = err?.response?.data?.message || err.message || 'Error al cancelar la cita';
+        error.value = err?.response?.data?.error || err?.response?.data?.message || err.message || 'Error al cancelar la cita';
     }
 };
 

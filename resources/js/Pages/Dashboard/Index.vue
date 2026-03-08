@@ -159,6 +159,17 @@
                                             Cancelar
                                         </button>
                                     </div>
+                                    <div class="mt-2" v-else-if="apt.status === 'ejecutada'">
+                                        <button
+                                            class="btn btn-sm btn-outline-danger"
+                                            :disabled="downloadingPdfs[apt.id]"
+                                            @click="downloadAppointmentPdf(apt.id)"
+                                        >
+                                            <span v-if="downloadingPdfs[apt.id]" class="spinner-border spinner-border-sm me-1"></span>
+                                            <i v-else class="bi bi-file-pdf me-1"></i>
+                                            Descargar PDF
+                                        </button>
+                                    </div>
                                 </div>
                             </div>
 
@@ -386,6 +397,7 @@ const loadingAppointments = ref(false);
 const loadingProfile = ref(false);
 const quotationActionLoading = ref({});
 const cancellingAppointments = ref({});
+const downloadingPdfs = ref({});
 const showQuotationModal = ref(false);
 const selectedQuotation = ref(null);
 const appointmentFilter = ref('activas'); // 'activas', 'completadas', 'canceladas', 'todas'
@@ -536,9 +548,33 @@ const cancelAppointment = async (appointmentId) => {
         await loadAppointments();
         await loadNotifications();
     } catch (error) {
-        alert(error?.response?.data?.message || 'No se pudo cancelar la cita.');
+        alert(error?.response?.data?.error || error?.response?.data?.message || 'No se pudo cancelar la cita.');
     } finally {
         cancellingAppointments.value[appointmentId] = false;
+    }
+};
+
+const downloadAppointmentPdf = async (appointmentId) => {
+    if (!appointmentId) return;
+
+    downloadingPdfs.value[appointmentId] = true;
+    try {
+        const response = await api.get(`/api/appointments/${appointmentId}/pdf`, {
+            responseType: 'blob',
+        });
+
+        const url = window.URL.createObjectURL(new Blob([response.data], { type: 'application/pdf' }));
+        const link = document.createElement('a');
+        link.href = url;
+        link.setAttribute('download', `cita-${appointmentId}.pdf`);
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+        window.URL.revokeObjectURL(url);
+    } catch (error) {
+        alert(error?.response?.data?.error || 'No se pudo descargar el PDF.');
+    } finally {
+        downloadingPdfs.value[appointmentId] = false;
     }
 };
 

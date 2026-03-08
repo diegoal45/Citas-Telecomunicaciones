@@ -1,5 +1,5 @@
 <template>
-    <AppLayout brand-href="/dashboard" brand-label="Mi Perfil" brand-icon="bi bi-person-circle" page-class="profile-page">
+    <AppLayout :brand-href="dashboardRoute" brand-label="Mi Perfil" brand-icon="bi bi-person-circle" page-class="profile-page">
         <main class="container-fluid px-3 px-md-4 py-4">
             <div class="row">
                 <!-- COLUMNA IZQUIERDA - Info del Perfil -->
@@ -95,7 +95,7 @@
                                         <span v-if="loading" class="spinner-border spinner-border-sm me-2"></span>
                                         {{ loading ? 'Guardando...' : 'Guardar Cambios' }}
                                     </button>
-                                    <a href="/dashboard" class="btn btn-secondary">Volver</a>
+                                    <a :href="dashboardRoute" class="btn btn-secondary">Volver</a>
                                 </div>
                             </form>
                         </div>
@@ -238,6 +238,15 @@ const success = ref('');
 const passwordError = ref('');
 const passwordSuccess = ref('');
 const appointments = ref([]);
+
+const dashboardRoute = computed(() => {
+    const role = user.value?.role?.name;
+
+    if (role === 'admin') return '/admin/dashboard';
+    if (role === 'tecnico_lider' || role === 'tech_leader') return '/tecnico/dashboard';
+    if (role === 'tecnico' || role === 'technician') return '/technician/dashboard';
+    return '/dashboard';
+});
 
 const form = ref({
     name: user.value.name || '',

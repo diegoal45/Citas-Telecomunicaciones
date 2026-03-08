@@ -896,12 +896,18 @@ const normalQueueTotalPages = computed(() => {
     return Math.ceil(normalQueueTotal.value / itemsPerPage);
 });
 
-const metrics = computed(() => ({
-    totalUsers: usersSummary.value.total,
-    totalTeams: teams.value.length,
-    pendingAttention: adminQueueTotal.value,
-    scheduledExecutions: appointments.value.filter((a) => ['para_ejecucion', 'programada'].includes(a.status)).length,
-}));
+const metrics = computed(() => {
+    const activeAppointments = appointments.value.filter((a) => !['cancelada', 'ejecutada'].includes(a.status)).length;
+    const completedAppointments = appointments.value.filter((a) => a.status === 'ejecutada').length;
+    const cancelledAppointments = appointments.value.filter((a) => a.status === 'cancelada').length;
+
+    return {
+        totalUsers: activeAppointments,
+        totalTeams: completedAppointments,
+        pendingAttention: cancelledAppointments,
+        scheduledExecutions: appointments.value.filter((a) => ['para_ejecucion', 'programada'].includes(a.status)).length,
+    };
+});
 
 const technicianUsers = computed(() => {
     // Solo usuarios con rol tecnico_lider (excluyendo al admin actual)

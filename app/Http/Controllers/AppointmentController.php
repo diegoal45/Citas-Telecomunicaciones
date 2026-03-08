@@ -558,9 +558,12 @@ class AppointmentController extends Controller
             'quotation'
         ])->findOrFail($id);
 
-        // Solo admin puede descargar PDFs
+        // Permitir descarga al admin o al cliente dueño de la cita
         $user = Auth::user();
-        if ($user->role->name !== 'admin') {
+        $isAdmin = $user->role->name === 'admin';
+        $isOwnerClient = $appointment->client_id === $user->id;
+
+        if (!$isAdmin && !$isOwnerClient) {
             return response()->json(['error' => 'No autorizado'], 403);
         }
 
