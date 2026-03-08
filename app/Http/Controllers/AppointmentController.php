@@ -183,6 +183,7 @@ class AppointmentController extends Controller
             $allTeamIds = $ledTeamIds->merge($memberTeamIds)->unique();
 
             $appointments = Appointment::whereIn('team_id', $allTeamIds)
+                ->where('status', '!=', 'cotizada')
                 ->with('client', 'team', 'quotation')
                 ->orderBy('scheduled_date')
                 ->get();
@@ -224,6 +225,10 @@ class AppointmentController extends Controller
         if (in_array($user->role->name, ['tecnico_lider', 'tecnico'])) {
             $teamIds = $user->teams()->pluck('team_id');
             if (!$appointment->team_id || !in_array($appointment->team_id, $teamIds->toArray())) {
+                return response()->json(['error' => 'No autorizado'], 403);
+            }
+
+            if ($appointment->status === 'cotizada') {
                 return response()->json(['error' => 'No autorizado'], 403);
             }
             

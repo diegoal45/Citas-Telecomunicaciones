@@ -166,12 +166,13 @@ class QuotationController extends Controller
 
         $quotation->update(['price' => $request->price]);
         
-        // Actualizar la fecha programada de la cita y cambiar a para_ejecucion
+        // Mantener en cotizada hasta que el cliente apruebe.
+        // Esto evita que el equipo vea la cita como ejecutable antes de la aprobacion.
         $appointment = $quotation->appointment;
         $appointment->update([
             'scheduled_date' => $request->scheduled_date,
             'appointment_type' => 'ejecucion',
-            'status' => 'para_ejecucion'
+            'status' => 'cotizada'
         ]);
 
         // Cuando se asigna precio, la cotizacion ya se muestra al cliente para aprobar/rechazar.
@@ -209,10 +210,9 @@ class QuotationController extends Controller
             return response()->json(['error' => 'La cotización aún no tiene precio asignado por administración'], 400);
         }
 
-        // marca la cotización como aprobada
-        // El status se mantiene en 'para_ejecucion' para que el técnico ejecute
+        // Marcar cotizacion como aprobada y habilitar ejecucion para el equipo.
         $quotation->update(['approved_at' => Carbon::now()]);
-        // No cambiar el status, se mantiene en 'para_ejecucion'
+        $appointment->update(['status' => 'para_ejecucion']);
 
         // Notificar al equipo que su cotización fue aprobada
         if ($appointment->team) {

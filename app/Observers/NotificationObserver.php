@@ -5,6 +5,7 @@ namespace App\Observers;
 use App\Models\Notification;
 use App\Mail\NotificationMail;
 use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\Log;
 
 class NotificationObserver
 {
@@ -15,24 +16,32 @@ class NotificationObserver
     public function created(Notification $notification): void
     {
         try {
-            // Log para debugging
-            \Log::info("Enviando notificación por correo", [
-                'notification_id' => $notification->id,
-                'user_id' => $notification->user_id,
-                'user_email' => $notification->user->email ?? 'no-email',
-                'type' => $notification->type,
-            ]);
-            
-            // Enviar correo al usuario asociado a la notificación
-            Mail::to($notification->user->email)->send(new NotificationMail($notification));
-            
-            \Log::info("Correo enviado exitosamente", ['notification_id' => $notification->id]);
+            // Ejecutar envio despues de responder al cliente para no bloquear el API.
+            dispatch(function () use ($notification): void {
+                try {
+                    $notification->loadMissing('user');
+                    $email = $notification->user?->email;
+
+                    if (!$email) {
+                        Log::warning('Notificacion sin email de destino', [
+                            'notification_id' => $notification->id,
+                            'user_id' => $notification->user_id,
+                        ]);
+                        return;
+                    }
+
+                    Mail::to($email)->send(new NotificationMail($notification));
+                } catch (\Throwable $e) {
+                    Log::error('Error enviando correo de notificacion', [
+                        'notification_id' => $notification->id ?? 'unknown',
+                        'error' => $e->getMessage(),
+                    ]);
+                }
+            })->afterResponse();
         } catch (\Exception $e) {
-            // Log del error con stack trace
-            \Log::error('Error enviando correo de notificación', [
+            Log::error('Error programando correo de notificacion', [
                 'notification_id' => $notification->id ?? 'unknown',
                 'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString(),
             ]);
         }
     }

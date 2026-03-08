@@ -19,8 +19,10 @@ class TechLeaderController extends Controller
         $teams = $user->ledTeams()->with('members', 'leader')->get();
         $teamIds = $teams->pluck('id')->toArray();
 
-        // Obtener citas de sus equipos
+        // Obtener citas de sus equipos.
+        // No mostrar cotizadas pendientes de decision del cliente.
         $appointments = Appointment::whereIn('team_id', $teamIds)
+            ->where('status', '!=', 'cotizada')
             ->with('client', 'team', 'quotation')
             ->orderBy('scheduled_date', 'desc')
             ->get();

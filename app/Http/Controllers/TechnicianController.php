@@ -16,8 +16,9 @@ class TechnicianController extends Controller
         $teams = $user->teams()->with('leader')->get();
         $teamIds = $teams->pluck('id')->toArray();
 
-        // Obtener citas de sus equipos
+        // Obtener citas de sus equipos solo cuando ya son relevantes para ejecucion.
         $appointments = Appointment::whereIn('team_id', $teamIds)
+            ->whereIn('status', ['para_ejecucion', 'programada', 'ejecutada', 'cancelada'])
             ->with('client', 'team', 'quotation')
             ->orderBy('scheduled_date', 'asc')
             ->get();
